@@ -1,11 +1,10 @@
-#include <stdint.h>
 #include <stdlib.h>
 
 #include "data_structures/vector.h"
 
 v_t* v_new(size_t len) {
     v_t *nv = NULL;
-    v_data_t *d;
+    v_data_t *d = NULL;
 
     nv = malloc(sizeof *nv);
     if (!nv) goto v_fail;
@@ -21,6 +20,8 @@ v_t* v_new(size_t len) {
     free(nv);
 
     v_fail:
+    nv = NULL;
+
     out:
     return nv;
 }

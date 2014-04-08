@@ -1,21 +1,23 @@
 #ifndef __MATRIX_H__3434343
 #define __MATRIX_H__3434343
 
-#include <stdint.h>
+#include <stdlib.h>
 
 #include "errors.h"
 
-#define MATRIX_DATA_TYPE float
+typedef float m_data_t;
 
 typedef struct m {
     size_t rows;
     size_t cols;
-    MATRIX_DATA_TYPE *data;
+    m_data_t *data;
 } m_t;
 
 m_t* m_new(size_t rows, size_t cols);
+error_t m_del(m_t *m);
 
-error_t m_set(m_t *mat, size_t m, size_t n, MATRIX_DATA_TYPE val);
+error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val);
+m_data_t m_get(m_t *mat, size_t m, size_t n);
 
 /* Multiple two matricies such that:
      res = lhs*rhs
