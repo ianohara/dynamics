@@ -1,9 +1,9 @@
-=========
-Mechanics
-=========
+========
+Dynamics
+========
 
-A Pure C99 library for solving mechanics problems.  Its only
-runtime dependencies are libc.  To build and test, you also
+A Pure C99 library for solving dynamics problems.  Its only
+runtime dependencies is libc.  To build and test, you also
 need cmake, make (or anything else cmake can target),
 and a gcc-like toolchain.
 

@@ -12,7 +12,11 @@ typedef struct v {
     VECTOR_DATA_TYPE *data;
 } v_t;
 
+/* Returns a new vector of length len.  No values are set */
 v_t* v_new(size_t len);
+
+/* Deletes an existing vector and frees any memory it uses */
+error_t v_del(v_t *);
 
 /* Sum the two vs and put the result in res.  It is
    fine for res to be the same as either the lhs or the rhs
