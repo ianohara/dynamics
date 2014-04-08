@@ -4,3 +4,4 @@ build/
 *.bak
 *.o
 *.pyc
+.tags*
