@@ -2,21 +2,37 @@
 #define __VECTOR_H__23232323
 
 #include <stdint.h>
+#include <math.h>
 
 #include "errors.h"
 
-#define VECTOR_DATA_TYPE float
+typedef float v_data_t;
+
+#define V_NAN ((v_data_t)NAN)
 
 typedef struct v {
     size_t len;
-    VECTOR_DATA_TYPE *data;
+    v_data_t *data;
 } v_t;
+
+inline error_t v_set(const v_t *v, size_t ind, v_data_t val) {
+    if (!v) return E_NULLP;
+    if (ind >= v->len) return E_VAL;
+    v->data[ind] = val;
+    return E_OK;
+}
+
+inline v_data_t v_get(const v_t * const v, size_t ind) {
+    if (!v) return V_NAN;
+    if (ind >= v->len) return V_NAN;
+    return v->data[ind];
+}
 
 /* Returns a new vector of length len.  No values are set */
 v_t* v_new(size_t len);
 
 /* Deletes an existing vector and frees any memory it uses */
-error_t v_del(v_t *);
+error_t v_del(v_t *v);
 
 /* Sum the two vs and put the result in res.  It is
    fine for res to be the same as either the lhs or the rhs
