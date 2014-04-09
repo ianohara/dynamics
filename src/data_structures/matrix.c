@@ -110,3 +110,16 @@ error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
     return E_OK;
 }
 
+error_t m_negate(m_t *mat, m_t *res)
+{
+    if (!mat || !res) return E_NULLP;
+    if (mat->cols != res->cols) return E_VAL;
+    if (mat->rows != res->rows) return E_VAL;
+
+    for (size_t m=0; m < res->rows; m++) {
+        for (size_t n=0; n < res->cols; n++) {
+            m_set(res, m, n, -m_get(mat,m,n));
+        }
+    }
+    return E_OK;
+}

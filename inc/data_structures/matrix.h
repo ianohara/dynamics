@@ -31,6 +31,6 @@ error_t m_mult(m_t *lhs, m_t *rhs, m_t *res);
 
 error_t m_add(m_t *lhs, m_t *rhs, m_t *res);
 
-error_t m_negate(m_t *lhs, m_t *rhs, m_t *res);
+error_t m_negate(m_t *mat, m_t *res);
 
 #endif /* __MATRIX_H__3434343 */
