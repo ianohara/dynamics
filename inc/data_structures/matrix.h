@@ -2,8 +2,11 @@
 #define __MATRIX_H__3434343
 
 #include <stdlib.h>
+#include <math.h>
 
 #include "errors.h"
+
+#define M_NAN ((m_data_t)NAN)
 
 typedef float m_data_t;
 
@@ -21,8 +24,8 @@ m_data_t m_get(m_t *mat, size_t m, size_t n);
 
 /* Multiple two matricies such that:
      res = lhs*rhs
-   It is alright if res is either lhs or rhs as long
-   as the sizes work out.
+
+   It is NOT alright for res to be the lhs or rhs.
 */
 error_t m_mult(m_t *lhs, m_t *rhs, m_t *res);
 
