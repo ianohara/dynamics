@@ -93,3 +93,20 @@ error_t m_mult(m_t *lhs, m_t *rhs, m_t *res)
     }
     return E_OK;
 }
+
+error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
+{
+    if (!lhs || !rhs || !res) return E_NULLP;
+    if (lhs->cols != rhs->cols) return E_VAL;
+    if (lhs->rows != rhs->rows) return E_VAL;
+    if (lhs->cols != res->cols) return E_VAL;
+    if (lhs->rows != res->rows) return E_VAL;
+
+    for (size_t m=0; m < res->rows; m++) {
+        for (size_t n=0; n < res->cols; n++) {
+            m_set(res, m, n, m_get(lhs,m,n)+m_get(rhs,m,n));
+        }
+    }
+    return E_OK;
+}
+
