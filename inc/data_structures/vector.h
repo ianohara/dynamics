@@ -28,6 +28,11 @@ inline v_data_t v_get(const v_t * const v, size_t ind) {
     return v->data[ind];
 }
 
+inline size_t v_len(const v_t * const v) {
+    if (!v) return 0;
+    return v->len;
+}
+
 /* Returns a new vector of length len.  No values are set */
 v_t* v_new(size_t len);
 
