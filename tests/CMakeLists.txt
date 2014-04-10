@@ -29,11 +29,18 @@ add_dependencies(clar clarsuite)
 add_executable(${test_executable} test.c)
 target_link_libraries(${test_executable} clar)
 
+# Add a new test.  The testsrc needs to be the .c file containing
+# the tests.  The file it tests should exist in the src/ tree
+# under the same name.  In other words, the tests/ directory
+# should exactly mirror the src/ directory.
 function(add_test testname testsrc)
     string(REPLACE " " ";" othersrc "${ARGN}")
-    add_library(${testname} ${testsrc} ${othersrc})
+    add_library(${testname} ${testsrc} "${src_dir}/${testsrc}" ${othersrc})
     target_link_libraries(${testname} clar c)
     target_link_libraries(${test_executable} ${testname})
 endfunction()
 
+# Add each individual test here.  The structure of the tests directory
+# should exactly match the src/ directory except in the tests directory
+# each .c file has tests for the corresponding src file.
 add_test(test_vector "data_structures/vector.c")
