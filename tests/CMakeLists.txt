@@ -48,6 +48,7 @@ add_test(test_vector "data_structures/vector.c")
 
 add_custom_target(
     run-tests
+    ALL
     COMMAND ${test_executable}
     DEPENDS ${test_executable}
 )
