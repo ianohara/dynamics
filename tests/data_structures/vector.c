@@ -8,15 +8,14 @@
 /* Includes from the project source tree */
 #include "data_structures/vector.h"
 
-
-void test_vector__initialize(void) {
+void test_data_structures_vector__initialize(void) {
     global_test_counter++;
 }
 
-void test_vector__cleanup(void) {
+void test_data_structures_vector__cleanup(void) {
 }
 
-void test_vector__set(void) {
+void test_data_structures_vector__set(void) {
     v_t *v;
     v = v_new(20);
     v_data_t val = 2.0f;

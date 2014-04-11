@@ -14,16 +14,17 @@ include_directories("${test_dir}" "${clar_dir}")
 #       is defined but unused --> Boom.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 
-add_library(clar "${clar_dir}/clar.c")
+add_custom_command(
+    OUTPUT ${test_dir}/clar.suite
+    COMMAND python ${clar_dir}/generate.py -f -x${test_dir}/test.c -x${clar_dir}/ ${test_dir}
+)
 
-add_custom_target(clarsuite
-                    COMMAND "/usr/bin/env"
-                            "python"
-                            "${clar_dir}/generate.py"
-                            "${test_dir}"
-                    VERBATIM
-                )
-add_dependencies(clar clarsuite)
+set_source_files_properties(
+    ${clar_dir}/clar.c
+    PROPERTIES OBJECT_DEPENDS ${test_dir}/clar.suite
+)
+
+add_library(clar ${clar_dir}/clar.c)
 
 # The final test executable
 add_executable(${test_executable} test.c)
