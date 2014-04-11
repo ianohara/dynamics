@@ -34,6 +34,24 @@ error_t v_del(v_t *v) {
     return E_OK;
 }
 
+error_t v_set(const v_t *v, size_t ind, v_data_t val) {
+    if (!v) return E_NULLP;
+    if (ind >= v->len) return E_VAL;
+    v->data[ind] = val;
+    return E_OK;
+}
+
+v_data_t v_get(const v_t * const v, size_t ind) {
+    if (!v) return V_NAN;
+    if (ind >= v->len) return V_NAN;
+    return v->data[ind];
+}
+
+size_t v_len(const v_t * const v) {
+    if (!v) return 0;
+    return v->len;
+}
+
 error_t v_sum(v_t *lhs, v_t *rhs, v_t *res) {
     if (!lhs || !rhs || !res) return E_NULLP;
     if (lhs->len != rhs->len) return E_VAL;
