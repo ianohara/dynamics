@@ -18,6 +18,9 @@ typedef struct v {
 /* Returns a new vector of length len.  No values are set */
 v_t* v_new(size_t len);
 
+/* Returns a new vector with the values in *d filled into it */
+v_t* v_new_from_floats(float *d, size_t dlen);
+
 /* Deletes an existing vector and frees any memory it uses */
 error_t v_del(v_t *v);
 

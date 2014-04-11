@@ -34,6 +34,19 @@ error_t v_del(v_t *v) {
     return E_OK;
 }
 
+v_t* v_new_from_floats(float *d, size_t dlen)
+{
+    v_t *v;
+    if (!d || !dlen) return NULL;
+    v = v_new(dlen);
+    if (!v) return NULL;
+
+    for (size_t i=0; i < dlen; i++)
+        v_set(v, i, (v_data_t)d[i]);
+
+    return v;
+}
+
 error_t v_set(const v_t *v, size_t ind, v_data_t val) {
     if (!v) return E_NULLP;
     if (ind >= v->len) return E_VAL;
