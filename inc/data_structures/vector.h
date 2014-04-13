@@ -6,7 +6,7 @@
 
 #include "errors.h"
 
-typedef float v_data_t;
+typedef double v_data_t;
 
 #define V_NAN ((v_data_t)NAN)
 
