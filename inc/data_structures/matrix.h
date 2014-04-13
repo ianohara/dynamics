@@ -8,7 +8,7 @@
 
 #define M_NAN ((m_data_t)NAN)
 
-typedef float m_data_t;
+typedef double m_data_t;
 
 typedef struct m {
     size_t rows;
