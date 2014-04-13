@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(mechanics)
+project(dynamics)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Wextra -Wfatal-errors -Werror")
 
