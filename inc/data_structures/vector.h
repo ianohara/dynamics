@@ -9,6 +9,16 @@
 typedef double v_data_t;
 
 #define V_NAN ((v_data_t)NAN)
+#define v_isnan(val) (isnan(val))
+
+/* Iterate over a vector from first index to last
+   using the index variable "ind". You are responsible
+   for brackets if you want 'em!
+*/
+#define v_foreach(v,ind) \
+    for (size_t __vlen=v_len(v), ind=0; \
+         ind < __vlen; \
+         ind++)
 
 typedef struct v {
     size_t len;
