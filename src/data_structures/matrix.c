@@ -56,6 +56,7 @@ error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val)
     if (n >= mat->cols) return E_VAL;
 
     mat->data[m_get_index(mat,m,n)] = val;
+
     return E_OK;
 }
 
@@ -91,6 +92,7 @@ error_t m_mult(m_t *lhs, m_t *rhs, m_t *res)
             m_set(res, m, n, rc_sum);
         }
     }
+
     return E_OK;
 }
 
@@ -107,6 +109,7 @@ error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
             m_set(res, m, n, m_get(lhs,m,n)+m_get(rhs,m,n));
         }
     }
+
     return E_OK;
 }
 
@@ -121,5 +124,6 @@ error_t m_negate(m_t *mat, m_t *res)
             m_set(res, m, n, -m_get(mat,m,n));
         }
     }
+
     return E_OK;
 }
