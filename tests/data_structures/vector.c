@@ -13,10 +13,12 @@ void test_data_structures_vector__initialize(void) {
     global_test_counter++;
 }
 
-void test_data_structures_vector__cleanup(void) {
+void test_data_structures_vector__cleanup(void)
+{
 }
 
-void test_data_structures_vector__set(void) {
+void test_data_structures_vector__set(void)
+{
     v_t *v;
     v = v_new(20);
     v_data_t val = 2.0f;
@@ -34,7 +36,8 @@ void test_data_structures_vector__set(void) {
     v_del(v);
 }
 
-void test_data_structures_vector__get(void) {
+void test_data_structures_vector__get(void)
+{
     v_t *v;
     v = v_new(20);
     cl_assert(v);
@@ -49,12 +52,13 @@ void test_data_structures_vector__get(void) {
         cl_assert_(v_get(v,i) == (v_data_t)i, "Getting failed with wrong value!");
 }
 
-void test_data_structures_vector__dot(void) {
+void test_data_structures_vector__dot(void)
+{
     size_t len_short = 20, len_long = 1010;
     float flts[len_short], flts2[len_short], flts3[len_short];
     v_t *vfl, *vfl2, *vfl3, *vz, *vo, *vz_long;
 
-    for (size_t i=0; i<array_length(flts); i++) flts[i]=(float)i;
+    for (size_t i=0; i<array_length(flts); i++) flts[i] = (float)i;
     for (size_t i=0; i<array_length(flts2); i++) flts2[i] = (float)(2*i);
     for (size_t i=0; i<array_length(flts3); i++) flts3[i] = (float)(3*i);
 
