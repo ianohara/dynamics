@@ -29,8 +29,16 @@ m_data_t m_get(m_t *mat, size_t m, size_t n);
 */
 error_t m_mult(m_t *lhs, m_t *rhs, m_t *res);
 
+/*  Add two matricies of the same dimensions.
+
+    It is alright for rhs and/or lhs to be the same as res
+*/
 error_t m_add(m_t *lhs, m_t *rhs, m_t *res);
 
+/*  Negate a matrix.
+
+    It is alright for mat to be the same as res
+*/
 error_t m_negate(m_t *mat, m_t *res);
 
 #endif /* __MATRIX_H__3434343 */
