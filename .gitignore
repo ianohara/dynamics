@@ -7,3 +7,4 @@ build/
 .tags*
 tests/.clarcache
 tests/clar.suite
+.vscode/
