@@ -1,3 +1,5 @@
+find_package(PythonInterp REQUIRED)
+
 set(test_dir "${CMAKE_SOURCE_DIR}/tests")
 set(clar_dir "${test_dir}/clar")
 set(src_dir "${CMAKE_SOURCE_DIR}/src")
@@ -16,7 +18,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 
 add_custom_command(
     OUTPUT ${test_dir}/clar.suite
-    COMMAND python ${clar_dir}/generate.py -f -x${test_dir}/test.c -x${clar_dir}/ ${test_dir}
+    COMMAND ${PYTHON_EXECUTABLE} ${clar_dir}/generate.py -f -x${test_dir}/test.c -x${clar_dir}/ ${test_dir}
 )
 
 set_source_files_properties(
