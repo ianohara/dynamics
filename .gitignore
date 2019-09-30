@@ -5,6 +5,5 @@ build/
 *.o
 *.pyc
 .tags*
-tests/clar
 tests/.clarcache
 tests/clar.suite
