@@ -1,5 +1,6 @@
 .git
 build/
+.build/
 *.swp
 *.bak
 *.o
@@ -8,3 +9,4 @@ build/
 tests/.clarcache
 tests/clar.suite
 .vscode/
+*.code-workspace
