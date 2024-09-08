@@ -127,3 +127,56 @@ error_t m_negate(m_t *mat, m_t *res)
 
     return E_OK;
 }
+
+error_t m_transpose(m_t *mat, m_t *res) {
+    if (!mat || !res) return E_NULLP;
+
+    if (mat->rows != res->cols) {
+        return E_VAL;
+    }
+    if (mat->cols != res->rows) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < mat->rows; m++) {
+        for (size_t n = 0; n < mat->cols; n++) {
+            m_set(res, n, m, m_get(mat, m, n));
+        }
+    }
+
+    return E_OK;
+}
+
+bool m_equal(m_t *a, m_t *b) {
+    if (!a || !b) {
+        return false;
+    }
+
+    if (a->rows != b->rows || a->cols != b->cols) {
+        return false;
+    }
+
+    for (size_t m = 0; m < a->rows; m++) {
+        for (size_t n = 0; n < a->cols; n++) {
+            if (m_get(a, m, n) != m_get(b, m, n)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+error_t m_set_all(m_t* mat, m_data_t val) {
+    if (!mat) {
+        return E_NULLP;
+    }
+
+    for (size_t m = 0; m < mat->rows; m++) {
+        for (size_t n = 0; n < mat->cols; n++) {
+            m_set(mat, m, n, val);
+        }
+    }
+
+    return E_OK;
+}

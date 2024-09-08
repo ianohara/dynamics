@@ -1,6 +1,7 @@
 #ifndef __MATRIX_H__3434343
 #define __MATRIX_H__3434343
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -41,4 +42,9 @@ error_t m_add(m_t *lhs, m_t *rhs, m_t *res);
 */
 error_t m_negate(m_t *mat, m_t *res);
 
+/* Get the transpose of the given matrix. */
+error_t m_transpose(m_t *mat, m_t *res);
+
+/* Set all entries of the matrix to the given value. */
+error_t m_set_all(m_t *mat, m_data_t val);
 #endif /* __MATRIX_H__3434343 */

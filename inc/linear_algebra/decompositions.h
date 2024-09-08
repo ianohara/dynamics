@@ -1,6 +1,7 @@
 #ifndef __LINEAR_ALGEBRA_DECOMPOSITONS__
 #define __LINEAR_ALGEBRA_DECOMPOSITONS__
 
+#include "errors.h"
 #include "data_structures/matrix.h"
 
 /* Returns the lower triangular matrix (L) of the Cholesky decomposition.  The full
@@ -11,9 +12,6 @@
  *
  * See: https://en.wikipedia.org/wiki/Cholesky_decomposition
  */
-m_t* la_decompositions_cholesky(m_t* A);
-
-bool la_is_hermitian(m_t* A);
-bool la_is_positive_definite(m_t* A);
+error_t la_decompositions_cholesky(m_t* A, m_t* L);
 
 #endif /* __LINEAR_ALGEBRA_DECOMPOSITONS__ */

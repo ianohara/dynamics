@@ -9,6 +9,7 @@ typedef enum error {
     E_OK    = 0,
     E_NULLP = 1,
     E_VAL   = 2,
+    E_ERR   = 3, // Generic error
 } error_t;
 
 #endif /* __ERRORS_H__121212 */
