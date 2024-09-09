@@ -180,3 +180,73 @@ error_t m_set_all(m_t* mat, m_data_t val) {
 
     return E_OK;
 }
+
+bool m_is_square(m_t* mat) {
+    return mat && mat->rows == mat->cols;
+}
+
+bool m_same_size(m_t* a, m_t* b) {
+    return a && b && a->rows == b->rows && a->cols == b->cols;
+}
+
+error_t m_l2_norm_column(m_t* src, m_t* dest, size_t col_idx) {
+    if (!src || !dest) {
+        return E_NULLP;
+    }
+
+    if (src->rows != dest->cols || src->cols - 1 < col_idx || dest->cols - 1 < col_idx) {
+        return E_VAL;
+    }
+
+    m_data_t col_length = 0.0;
+    for (size_t m = 0; m < src->rows; m++) {
+        col_length += m_get(src, m, col_idx);
+    }
+    col_length = sqrt(col_length);
+
+    for (size_t m = 0; m < src->rows; m++) {
+        m_set(dest, m, col_idx, m_get(src, m, col_idx) / col_length);
+    }
+
+    return E_OK;
+}
+
+error_t m_copy_column(m_t* src, m_t* dest, size_t col) {
+    if (!src || !dest){
+        return E_NULLP;
+    }
+
+    if (!m_same_size(src, dest)) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < src->rows; m++) {
+        m_set(dest, m, col, m_get(src, m, col));
+    }
+
+    return E_OK;
+}
+
+error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res) {
+    if (!A || !B || !res) {
+        return E_NULLP;
+    }
+
+    if (!m_same_size(A, B)) {
+        return E_VAL;
+    }
+
+    if (a_col > A->cols - 1 || b_col > B->cols) {
+        return E_VAL;
+    }
+
+    m_data_t tmp_res = 0.0;
+
+    for (size_t m = 0; m < A->rows; m++) {
+        tmp_res += m_get(A, m, a_col)*m_get(B, m, b_col);
+    }
+
+    *res = tmp_res;
+
+    return E_OK;
+}

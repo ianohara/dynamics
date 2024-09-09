@@ -11,13 +11,14 @@
 
 typedef double m_data_t;
 
-typedef struct m {
+typedef struct m
+{
     size_t rows;
     size_t cols;
     m_data_t *data;
 } m_t;
 
-m_t* m_new(size_t rows, size_t cols);
+m_t *m_new(size_t rows, size_t cols);
 error_t m_del(m_t *m);
 
 error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val);
@@ -47,4 +48,14 @@ error_t m_transpose(m_t *mat, m_t *res);
 
 /* Set all entries of the matrix to the given value. */
 error_t m_set_all(m_t *mat, m_data_t val);
+
+bool m_is_square(m_t *mat);
+
+bool m_same_size(m_t *a, m_t *b);
+
+error_t m_l2_norm_column(m_t *src, m_t *dest, size_t col_idx);
+
+error_t m_copy_column(m_t* src, m_t* dest, size_t col);
+
+error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res);
 #endif /* __MATRIX_H__3434343 */

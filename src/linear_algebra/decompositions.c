@@ -54,3 +54,83 @@ error_t la_decompositions_cholesky(m_t* A, m_t* L) {
 
     return E_OK;
 }
+
+// See here for stable gram schmidt: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Numerical_stability
+error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q) {
+    if (!A || !Q) {
+        return E_NULLP;
+    }
+
+    if (!m_same_size(A, Q)) {
+        return E_VAL;
+    }
+
+    if (E_OK != m_set_all(Q, 0)) {
+        return E_ERR;
+    }
+
+    if (E_OK != m_l2_norm_column(A, Q, 0)) {
+        return E_ERR;
+    }
+
+    for (size_t n = 1; n < A->cols; n++) {
+        if (E_OK != m_copy_column(A, Q, n)) {
+            return E_ERR;
+        }
+
+        for (size_t n2 = 0; n2 < n; n2++) {
+            m_data_t col_dot;
+            if (E_OK != m_column_dot_product(Q, n2, Q, n, &col_dot)) {
+                return E_ERR;
+            }
+            for (size_t m = 0; m < Q->rows; m++) {
+                m_set(Q, m, n, m_get(Q, m, n) - col_dot*m_get(Q, m, n2));
+            }
+        }
+        if (E_OK != m_l2_norm_column(Q, Q, n)) {
+            return E_ERR;
+        }
+    }
+
+    return E_OK;
+}
+
+/* Uses the Gram-Schmidt process as outlined here: https://en.wikipedia.org/wiki/QR_decomposition#Computing_the_QR_decomposition
+ *
+ * For now this only supports the square A case.
+ */
+error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
+    if (!A || !Q || !R) {
+        return E_NULLP;
+    }
+
+    if (!m_is_square(A) || !m_is_square(Q) || !m_is_square(R)) {
+        return E_VAL;
+    }
+
+    if (!m_same_size(A, Q) || !m_same_size(A, R)) {
+        return E_VAL;
+    }
+
+    if (E_OK != m_set_all(R, 0)) {
+        return E_ERR;
+    }
+
+    // This will zero out Q for us.
+    if (E_OK != la_decomopositions_gram_schmidt(A, Q)) {
+        return E_ERR;
+    }
+
+    for (size_t m = 0; m < R->rows; m++) {
+        for (size_t n = m; n < R->cols; n++) {
+            m_data_t e_m_dot_a_n;
+            if (E_OK != m_column_dot_product(Q, m, A, n, &e_m_dot_a_n)) {
+                return E_ERR;
+            }
+
+            m_set(R, m, n, e_m_dot_a_n);
+        }
+    }
+
+    return E_OK;
+}
