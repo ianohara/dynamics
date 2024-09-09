@@ -1,2 +1,4 @@
 add_subdirectory(data_structures)
 add_subdirectory(integrators)
+add_subdirectory(linear_algebra)
+add_subdirectory(filtering)

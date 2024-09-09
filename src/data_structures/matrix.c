@@ -189,7 +189,7 @@ bool m_same_size(m_t* a, m_t* b) {
     return a && b && a->rows == b->rows && a->cols == b->cols;
 }
 
-error_t m_l2_norm_column(m_t* src, m_t* dest, size_t col_idx) {
+error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
     if (!src || !dest) {
         return E_NULLP;
     }

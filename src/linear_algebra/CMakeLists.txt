@@ -1,0 +1,5 @@
+add_library(linear_algebra_decompositions "decompositions.c")
+target_link_libraries(linear_algebra_decompositions linear_algebra_properties matrix c)
+
+add_library(linear_algebra_properties "properties.c")
+target_link_libraries(linear_algebra_properties matrix c)

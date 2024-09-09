@@ -46,16 +46,24 @@ error_t m_negate(m_t *mat, m_t *res);
 /* Get the transpose of the given matrix. */
 error_t m_transpose(m_t *mat, m_t *res);
 
+/* Returns true if both matricies have exactly equal sizes and components */
+bool m_equal(m_t *a, m_t *b);
+
 /* Set all entries of the matrix to the given value. */
 error_t m_set_all(m_t *mat, m_data_t val);
 
+/* Returns true if mat is a square matrix. */
 bool m_is_square(m_t *mat);
 
+/* Returns true if mats a and b have exactly equal rows and column counts. */
 bool m_same_size(m_t *a, m_t *b);
 
-error_t m_l2_norm_column(m_t *src, m_t *dest, size_t col_idx);
+/* Calculates the normalized vector of column col_idx (using the l2 norm) in src and places it in dest.  It is okay if dest == src. */
+error_t m_normalize_column_l2(m_t *src, m_t *dest, size_t col_idx);
 
+/* Copy column col from src to dest */
 error_t m_copy_column(m_t* src, m_t* dest, size_t col);
 
+/* Calculate the dot product of the two requested columns in A and B and put the result in res. */
 error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res);
 #endif /* __MATRIX_H__3434343 */

@@ -1,4 +1,5 @@
 #include "linear_algebra/decompositions.h"
+#include "linear_algebra/properties.h"
 
 error_t la_decompositions_cholesky(m_t* A, m_t* L) {
     if (!A || !L) {
@@ -69,7 +70,7 @@ error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q) {
         return E_ERR;
     }
 
-    if (E_OK != m_l2_norm_column(A, Q, 0)) {
+    if (E_OK != m_normalize_column_l2(A, Q, 0)) {
         return E_ERR;
     }
 
@@ -87,7 +88,7 @@ error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q) {
                 m_set(Q, m, n, m_get(Q, m, n) - col_dot*m_get(Q, m, n2));
             }
         }
-        if (E_OK != m_l2_norm_column(Q, Q, n)) {
+        if (E_OK != m_normalize_column_l2(Q, Q, n)) {
             return E_ERR;
         }
     }
