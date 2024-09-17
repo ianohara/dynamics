@@ -31,7 +31,7 @@ m_t* m_new(size_t rows, size_t cols)
     return nm;
 }
 
-error_t m_del(m_t *m)
+error_t m_free(m_t *m)
 {
     if (!m) return E_OK;
     if (m->data) free(m->data);
@@ -211,17 +211,63 @@ error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
     return E_OK;
 }
 
-error_t m_copy_column(m_t* src, m_t* dest, size_t col) {
+error_t m_copy_column(m_t* src, size_t src_col, m_t* dest, size_t dest_col) {
     if (!src || !dest){
         return E_NULLP;
     }
 
-    if (!m_same_size(src, dest)) {
+    if (src->rows != dest->rows) {
+        return E_VAL;
+    }
+
+    if (src_col > src->cols - 1 || dest_col > dest->cols - 1) {
         return E_VAL;
     }
 
     for (size_t m = 0; m < src->rows; m++) {
-        m_set(dest, m, col, m_get(src, m, col));
+        m_set(dest, m, dest_col, m_get(src, m, src_col));
+    }
+
+    return E_OK;
+}
+
+error_t m_copy_into(m_t* src, m_t* dest, size_t dest_row, size_t dest_col) {
+    if (!src || !dest) {
+        return E_NULLP;
+    }
+
+    if (dest_row + src->rows > dest->rows - 1) {
+        return E_VAL;
+    }
+
+    if (dest_col + src->cols > dest->cols - 1) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < src->rows; m++) {
+        for (size_t n = 0; n < src->cols; n++) {
+            m_set(dest, dest_row + m, dest_col + n, m_get(src, m, n));
+        }
+    }
+
+    return E_OK;
+}
+
+error_t m_add_scaled_column(m_t* src, size_t src_col, m_data_t scale, m_t* dest, size_t dest_col) {
+    if (!src || !dest){
+        return E_NULLP;
+    }
+
+    if (src->rows != dest->rows) {
+        return E_VAL;
+    }
+
+    if (src_col > src->cols - 1 || dest_col > dest->cols - 1) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < src->rows; m++) {
+        m_set(dest, m, dest_col, m_get(dest, m, dest_col) + scale*m_get(src, m, src_col));
     }
 
     return E_OK;
@@ -247,6 +293,40 @@ error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_
     }
 
     *res = tmp_res;
+
+    return E_OK;
+}
+
+bool m_is_vector(m_t* mat) {
+    return mat && mat->cols == 1 && mat->rows > 0;
+}
+
+size_t m_max_dim(m_t* mat) {
+    if (!mat) {
+        return 0;
+    }
+
+    return mat->rows > mat->cols ? mat->rows : mat->cols;
+}
+
+error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res) {
+    if (!lhs || !rhs || !res) {
+        return E_NULLP;
+    }
+
+    if (!m_is_vector(lhs) || !m_is_vector(rhs)) {
+        return E_VAL;
+    }
+
+    if (res->rows != lhs->rows || res->cols != rhs->rows) {
+        return E_VAL;
+    }
+
+    for (size_t m_l = 0; m_l < lhs->rows; m_l++) {
+        for (size_t m_r = 0; m_r < rhs->rows; m_r++) {
+            m_set(res, m_l, m_r, m_get(lhs, m_l, 0)*m_get(rhs, m_r, 0));
+        }
+    }
 
     return E_OK;
 }

@@ -10,6 +10,7 @@ typedef enum error {
     E_NULLP = 1,
     E_VAL   = 2,
     E_ERR   = 3, // Generic error
+    E_INIT  = 4, // Initialization error
 } error_t;
 
 #endif /* __ERRORS_H__121212 */

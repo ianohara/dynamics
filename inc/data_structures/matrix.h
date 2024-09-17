@@ -19,7 +19,7 @@ typedef struct m
 } m_t;
 
 m_t *m_new(size_t rows, size_t cols);
-error_t m_del(m_t *m);
+error_t m_free(m_t *m);
 
 error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val);
 m_data_t m_get(m_t *mat, size_t m, size_t n);
@@ -62,8 +62,20 @@ bool m_same_size(m_t *a, m_t *b);
 error_t m_normalize_column_l2(m_t *src, m_t *dest, size_t col_idx);
 
 /* Copy column col from src to dest */
-error_t m_copy_column(m_t* src, m_t* dest, size_t col);
+error_t m_copy_column(m_t* src, size_t src_col, m_t* dest, size_t dest_col);
+
+/* Copy the given matrix into the specified position in the destination matrix. */
+error_t m_copy_into(m_t* src, m_t* dest, size_t dest_row, size_t dest_col);
+
+/* Add the column from src, scaled by this factor, to the column in dest. */
+error_t m_add_scaled_column(m_t* src, size_t src_col_idx, m_data_t src_scale, m_t* dest, size_t dest_col_idx);
 
 /* Calculate the dot product of the two requested columns in A and B and put the result in res. */
 error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res);
+
+bool m_is_vector(m_t* mat);
+
+size_t m_max_dim(m_t* mat);
+
+error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res);
 #endif /* __MATRIX_H__3434343 */

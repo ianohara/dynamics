@@ -75,7 +75,7 @@ error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q) {
     }
 
     for (size_t n = 1; n < A->cols; n++) {
-        if (E_OK != m_copy_column(A, Q, n)) {
+        if (E_OK != m_copy_column(A, n, Q, n)) {
             return E_ERR;
         }
 
