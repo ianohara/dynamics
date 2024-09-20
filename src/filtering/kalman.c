@@ -2,8 +2,13 @@
 #include "linear_algebra/decompositions.h"
 #include "data_structures/matrix.h"
 
-kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn, m_t* state_covariance, m_t* measurement_covariance) {
-    if (!initial_state_guess || !state_fn || !state_covariance || !measurement_covariance) {
+kalman_context_t* kalman_new(
+    m_t *initial_state_guess,
+    kalman_state_fn state_fn,
+
+    m_t* process_covariance,
+    m_t* measurement_covariance) {
+    if (!initial_state_guess || !state_fn || !process_covariance || !measurement_covariance) {
         return NULL;
     }
 
@@ -11,7 +16,7 @@ kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn,
         return NULL;
     }
 
-    if (!m_is_square(state_covariance) || state_covariance->rows != initial_state_guess->rows) {
+    if (!m_is_square(process_covariance) || process_covariance->rows != initial_state_guess->rows) {
         return NULL;
     }
 
@@ -19,7 +24,8 @@ kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn,
         return NULL;
     }
 
-    size_t state_len = m_max_dim(initial_state_guess);
+    size_t state_len = m_max_dim(initial_state_guess) + m_max_dim(process_covariance) + m_max_dim(measurement_covariance);
+    size_t measurement_len = m_max_dim(measurement_covariance);
 
     kalman_context_t* context = malloc(sizeof(*context));
     // Allocate and zero everything, then calculate our initial cholesky factor
@@ -30,32 +36,60 @@ kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn,
     context->alpha = 1e-4;
     context->beta = 2.0;
 
-    context->lambda = state_len * (context->alpha*context->alpha - 1.0);
-    context->eta = sqrtf((state_len + context->lambda));
+    context->lambda = context->alpha*context->alpha * (state_len + context->kappa) - state_len;
+    context->eta = sqrtf(state_len + context->lambda);
 
     context->state_fn = state_fn;
     size_t sigma_point_count = 2*state_len + 1;
-    if (!(context->sigma_weights = m_new(sigma_point_count, 1))) {
+    if (!(context->sigma_weights_m = m_new(sigma_point_count, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    m_data_t weight_0 = context->lambda / (state_len + context->lambda);
-    m_data_t weight_i = 1.0 / (2 * (state_len + context->lambda));
-    for (size_t m = 0; m < context->sigma_weights->rows; m++) {
-        m_data_t this_weight = m == 0 ? weight_0 : weight_i;
-        if (E_OK != m_set(context->sigma_weights, m, 1, this_weight)) {
+    if (!(context->sigma_weights_c = m_new(sigma_point_count, 1))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    m_data_t weight_0_m = context->lambda / (state_len + context->lambda);
+    m_data_t weight_0_c = context->lambda / (state_len + context->lambda) + (1 - context->alpha*context->alpha + context->beta);
+    m_data_t weight_i = 1.0 / (2.0 * (state_len + context->lambda));
+    for (size_t m = 0; m < context->sigma_weights_m->rows; m++) {
+        m_data_t this_weight_m = m == 0 ? weight_0_m : weight_i;
+        m_data_t this_weight_c = m == 0 ? weight_0_c : weight_i;
+        if (E_OK != m_set(context->sigma_weights_m, m, 1, this_weight_m)) {
+            kalman_free(context);
+            return NULL;
+        }
+
+        if (E_OK != m_set(context->sigma_weights_c, m, 1, this_weight_c)) {
             kalman_free(context);
             return NULL;
         }
     }
 
-    if (!(context->chi_k = m_new(state_len, sigma_point_count))) {
+
+    if (!(context->P_km1 = m_new(state_len, state_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->chi_km1 = m_new(state_len, sigma_point_count))) {
+    if (!(context->sqrt_P_km1 = m_new(state_len, state_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->P_k_t = m_new(state_len, state_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->P_yy = m_new(measurement_len, measurement_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->P_xy = m_new(state_len, measurement_len))) {
         kalman_free(context);
         return NULL;
     }
@@ -75,12 +109,57 @@ kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn,
         return NULL;
     }
 
-    if (!(context->S_k = m_new(state_len, state_len))) {
+    if (!(context->chi_k = m_new(state_len, sigma_point_count))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->S_k_t = m_new(state_len, state_len))) {
+    if (!(context->chi_km1 = m_new(state_len, sigma_point_count))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->x_a = m_new(state_len, 1))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->x_b = m_new(state_len, 1))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->P_a = m_new(state_len, state_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->Y_k = m_new(measurement_len, sigma_point_count))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->y_hat_k_t = m_new(measurement_len, 1))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->y_a = m_new(measurement_len, 1))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->K = m_new(state_len, measurement_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->K_transpose = m_new(measurement_len, state_len))) {
+        kalman_free(context);
+        return NULL;
+    }
+
+    if (!(context->scratch_yx = m_new(measurement_len, state_len))) {
         kalman_free(context);
         return NULL;
     }
@@ -101,86 +180,37 @@ kalman_context_t* kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn,
     }
     m_free(guess_negated);
 
-    if (E_OK != la_decompositions_cholesky(initial_covariance, context->S_k)) {
-        m_free(initial_covariance);
-        kalman_free(context);
-
-        return NULL;
-    }
-
-
-    if (!(context->x_scratch = m_new(state_len, 1))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->weighted_chi_minus_x_k_t = m_new(state_len, sigma_point_count))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    // Both of the covariance matricies are only used in sqrt form, so just calculate and keep those.
-    if (!(context->sqrt_state_covariance = m_new(state_len, state_len))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (E_OK != la_decompositions_cholesky(state_covariance, context->sqrt_state_covariance)) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->sqrt_measurement_covariance = m_new(measurement_covariance->rows, measurement_covariance->cols))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (E_OK != la_decompositions_cholesky(measurement_covariance, context->sqrt_measurement_covariance)) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->state_qr_block = m_new(state_len, 2*state_len))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->state_qr_Q_placeholder = m_new(state_len, 2*state_len))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->measurement_qr_block = m_new(state_len, 2*state_len))) {
-        kalman_free(context);
-        return NULL;
-    }
-
-    if (!(context->measurement_qr_Q_placeholder = m_new(state_len, 2*state_len))) {
-        kalman_free(context);
-        return NULL;
-    }
-
     return context;
 }
 
 void kalman_free(kalman_context_t* context) {
-    m_free(context->sigma_weights);
+    m_free(context->sigma_weights_m);
+    m_free(context->sigma_weights_c);
+
+    m_free(context->P_km1);
+    m_free(context->sqrt_P_km1);
+
+    m_free(context->P_k_t);
+    m_free(context->P_yy);
+    m_free(context->P_xy);
+
     m_free(context->x_hat);
     m_free(context->x_hatm1);
     m_free(context->x_hat_k_t);
-    m_free(context->S_k);
-    m_free(context->S_k_t);
     m_free(context->chi_k);
     m_free(context->chi_km1);
 
-    m_free(context->x_scratch);
-    m_free(context->weighted_chi_minus_x_k_t);
-    m_free(context->sqrt_state_covariance);
-    m_free(context->sqrt_measurement_covariance);
-    m_free(context->state_qr_block);
-    m_free(context->state_qr_Q_placeholder);
-    m_free(context->measurement_qr_block);
-    m_free(context->measurement_qr_Q_placeholder);
+    m_free(context->x_b);
+    m_free(context->x_a);
+    m_free(context->P_a);
+    m_free(context->Y_k);
+    m_free(context->y_hat_k_t);
+    m_free(context->y_a);
+    m_free(context->K);
+    m_free(context->K_transpose);
+    m_free(context->scratch_yx);
+
+    free(context);
 }
 
 static error_t _kalman_calc_sigmas(kalman_context_t* context) {
@@ -188,16 +218,26 @@ static error_t _kalman_calc_sigmas(kalman_context_t* context) {
         return E_VAL;
     }
 
-    for (size_t n = 1; n < context->chi_km1->cols; n++) {
+    if (E_OK != la_decompositions_cholesky(context->P_km1, context->sqrt_P_km1)) {
+        return E_VAL;
+    }
+
+    for (size_t n = 1; n < (context->chi_km1->cols - 1) / 2; n++) {
         if (E_OK != m_copy_column(context->x_hat, n, context->chi_km1, n)) {
             return E_VAL;
         }
 
-        if (E_OK != m_add_scaled_column(context->S_k, n, context->eta, context->chi_km1, n)) {
+        if (E_OK != m_add_scaled_column(context->sqrt_P_km1, n, context->eta, context->chi_km1, n)) {
+            return E_VAL;
+        }
+    }
+
+    for (size_t n = (context->chi_km1->cols - 1); n < context->chi_km1->cols; n++) {
+        if (E_OK != m_copy_column(context->x_hat, n, context->chi_km1, n)) {
             return E_VAL;
         }
 
-        if (E_OK != m_add_scaled_column(context->S_k, n, -context->eta, context->chi_km1, n)) {
+        if (E_OK != m_add_scaled_column(context->sqrt_P_km1, n, -context->eta, context->chi_km1, n)) {
             return E_VAL;
         }
     }
@@ -211,11 +251,17 @@ static error_t _kalman_propogate_sigmas(kalman_context_t* context, m_t* input_ve
     }
 
     for (size_t n = 0; n < context->chi_k->cols; n++) {
-        if (E_OK != context->state_fn(context->x_hatm1, input_vector, context->x_scratch)) {
+        if (E_OK != m_copy_column(context->chi_km1, n, context->x_a, 0)) {
             return E_ERR;
         }
 
-        if (E_OK != m_copy_column(context->x_scratch, 0, context->chi_k, n)) {
+        // This is wrong --> need to unpack x_a into the x and v parts, and figure out how
+        // input vector interplays with v part (they are the same?)
+        if (E_OK != context->state_fn(context->x_a, input_vector, context->x_b)) {
+            return E_ERR;
+        }
+
+        if (E_OK != m_copy_column(context->x_b, 0, context->chi_k, n)) {
             return E_ERR;
         }
     }
@@ -228,54 +274,95 @@ error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measureme
         return E_NULLP;
     }
 
-    // Equation (17)
+    // Calculate chi_k minus 1
     if (E_OK != _kalman_calc_sigmas(context)) {
         return E_ERR;
     }
 
-    // Equation (18)
+    //// Time update steps
+    // Calculate chi_k
     if (E_OK != _kalman_propogate_sigmas(context, input_vector)) {
         return E_ERR;
     }
 
-    // Equation (19)
+    // Calculate x_hat_k_bar (aka x_hat_k_t here)
     m_set_all(context->x_hat_k_t, 0);
     for (size_t n = 0; n < context->chi_k->cols; n++) {
-        if (E_OK != m_add_scaled_column(context->chi_k, n, m_get(context->sigma_weights, n, 0), context->x_hat_k_t, 0)) {
+        if (E_OK != m_add_scaled_column(context->chi_k, n, m_get(context->sigma_weights_m, n, 0), context->x_hat_k_t, 0)) {
             return E_ERR;
         }
     }
 
-    // Equation (20)
-    // Fill in block matrix for qr decomp
-    m_set_all(context->state_qr_block, 0.0);
-    m_data_t sqrt_weight_1 = sqrtf(m_get(context->sigma_weights, 1, 0));
-    for (size_t n = 0; n < context->chi_k->cols - 1; n++) {
-        if (E_OK != m_add_scaled_column(context->chi_k, n+1, sqrt_weight_1, context->state_qr_block, n)) {
-            return E_ERR;
-        }
-        if (E_OK != m_add_scaled_column(context->x_hat_k_t, n+1, -sqrt_weight_1, context->state_qr_block, n)) {
-            return E_ERR;
-        }
+    // Calculate the time covariance
+    m_set_all(context->P_k_t, 0);
+    for (size_t n = 0; n < context->chi_k->cols; n++) {
+        m_copy_column(context->chi_k, n, context->x_a, 0);
+        m_add_scaled_column(context->x_hat_k_t, 0, -1.0, context->x_a, 0);
+
+        m_outer_product(context->x_a, context->x_a, context->P_a);
+        m_scalar_multiply(context->P_a, m_get(context->sigma_weights_c, n, 0), context->P_a);
+
+        m_add(context->P_k_t, context->P_a, context->P_k_t);
     }
 
-    if (E_OK != m_copy_into(context->sqrt_state_covariance, context->state_qr_block, 0, context->chi_k->cols)) {
-        return E_ERR;
+    // Calculate the measurement estimate given these sigmas
+    for (size_t n = 0; n < context->Y_k->cols; n++) {
+
+        context->measurement_fn(context->x_hat_k_t, NULL, context->y_a);
+        m_copy_column(context->y_a, 0, context->Y_k, n);
     }
 
-    if (E_OK != la_decompositions_qr(context->state_qr_block, context->state_qr_Q_placeholder, context->S_k_t)) {
-        return E_ERR;
+
+    m_set_all(context->y_hat_k_t, 0);
+    for (size_t n = 0; n < context->Y_k->cols; n++) {
+        m_add_scaled_column(context->Y_k, n, m_get(context->sigma_weights_m, n, 0), context->y_hat_k_t, 0);
     }
 
-    // Equation (21)
-    m_set_all(context->x_scratch, 0);
-    if (E_OK != m_copy_column(context->chi_k, 0, context->x_scratch, 0)) {
-        return E_ERR;
+    //// Measurement update calcs
+    // covariance of measurements from sigma points
+    m_set_all(context->P_yy, 0);
+    for (size_t n = 0; n < context->Y_k->cols; n++) {
+        m_copy_column(context->Y_k, n, context->y_a, 0);
+        m_add_scaled_column(context->y_hat_k_t, 0, -1.0, context->y_a, 0);
+
+        m_outer_product(context->y_a, context->y_a, context->P_yy);
+        m_scalar_multiply(context->P_yy, m_get(context->sigma_weights_c, n, 0), context->P_yy);
     }
-    if (E_OK != m_add_scaled_column(context->x_hat_k_t, 0, -1.0, context->x_scratch, 0)) {
-        return E_ERR;
+
+    // Covariance of the state and sigma estimated measurements
+    // NOTE(imo): Could re-use x_a and y_a from above, but this is already confusing so just redo to stay 1-1 w the paper
+    m_set_all(context->P_xy, 0);
+    for (size_t n = 0; n < context->chi_k->cols; n++) {
+        m_copy_column(context->chi_k, n, context->x_a, 0);
+        m_add_scaled_column(context->x_hat_k_t, 0, -1.0, context->x_a, 0);
+
+        m_copy_column(context->Y_k, n, context->y_a, 0);
+        m_add_scaled_column(context->y_hat_k_t, 0, -1.0, context->y_a, 0);
+
+        m_outer_product(context->x_a, context->y_a, context->P_xy);
+        m_scalar_multiply(context->P_xy, m_get(context->sigma_weights_c, n, 0), context->P_xy);
     }
-    if (E_OK != la_decompositions_cholesky_update(context->S_k_t, context->x_scratch, m_get(context->sigma_weights, 0, 0)) {
-        return E_ERR;
-    }
+
+    m_invert(context->P_yy, context->P_a);
+
+    m_mult(context->P_xy, context->P_a, context->K);
+
+    m_copy_column(context->x_hat_k_t, 0, context->x_hat, 0);
+
+    m_mult(context->K, measurement, context->x_a);
+    m_mult(context->K, context->y_hat_k_t, context->x_b);
+    m_add_scaled_column(context->x_a, 0, 1.0, context->x_hat, 0);
+    m_add_scaled_column(context->x_b, 0, -1.0, context->x_hat, 0);
+
+    m_transpose(context->K, context->K_transpose);
+    m_mult(context->P_yy, context->K_transpose, context->scratch_yx);
+
+    m_mult(context->K, context->scratch_yx, context->P_a);
+    m_scalar_multiply(context->P_a, -1.0, context->P_a);
+
+    // Really P_k in the paper, but just store it immediately in P_km1 since that's how it'll
+    // be used next time around.
+    m_add(context->P_k_t, context->P_a, context->P_km1);
+
+    return E_OK;
 }

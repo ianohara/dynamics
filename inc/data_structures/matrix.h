@@ -78,4 +78,8 @@ bool m_is_vector(m_t* mat);
 size_t m_max_dim(m_t* mat);
 
 error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res);
+
+error_t m_scalar_multiply(m_t* src, m_data_t multiplyer, m_t* dest);
+
+error_t m_invert(m_t* A, m_t* res);
 #endif /* __MATRIX_H__3434343 */
