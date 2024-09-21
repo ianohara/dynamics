@@ -231,7 +231,7 @@ static error_t _kalman_calc_sigmas(kalman_context_t* context) {
     }
 
     for (size_t n = 1; n < (context->chi_km1->cols - 1) / 2; n++) {
-        if (E_OK != m_copy_column(context->x_hat, n, context->chi_km1, n)) {
+        if (E_OK != m_copy_column(context->x_hat, 0, context->chi_km1, n)) {
             return E_VAL;
         }
 
@@ -241,7 +241,7 @@ static error_t _kalman_calc_sigmas(kalman_context_t* context) {
     }
 
     for (size_t n = (context->chi_km1->cols - 1); n < context->chi_km1->cols; n++) {
-        if (E_OK != m_copy_column(context->x_hat, n, context->chi_km1, n)) {
+        if (E_OK != m_copy_column(context->x_hat, 0, context->chi_km1, n)) {
             return E_VAL;
         }
 
