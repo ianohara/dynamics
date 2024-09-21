@@ -66,7 +66,7 @@ error_t m_free(m_t *m)
 */
 static inline size_t m_get_index(m_t *mat, size_t m, size_t n)
 {
-    return mat->data[m*mat->cols+n];
+    return m*mat->cols+n;
 }
 
 error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val)
