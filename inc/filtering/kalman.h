@@ -66,4 +66,7 @@ kalman_context_t *kalman_new(
     m_t* process_covariance,
     m_t* measurement_covariance);
 void kalman_free(kalman_context_t *context);
+
+error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement);
+
 #endif
