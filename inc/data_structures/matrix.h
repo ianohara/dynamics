@@ -21,6 +21,9 @@ typedef struct m
 m_t *m_new(size_t rows, size_t cols);
 error_t m_free(m_t *m);
 
+/* Create and return a new square identity matrix. */
+m_t* m_identity(size_t dim);
+
 error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val);
 m_data_t m_get(m_t *mat, size_t m, size_t n);
 
@@ -82,4 +85,5 @@ error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res);
 error_t m_scalar_multiply(m_t* src, m_data_t multiplyer, m_t* dest);
 
 error_t m_invert(m_t* A, m_t* res);
+
 #endif /* __MATRIX_H__3434343 */

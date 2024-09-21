@@ -5,7 +5,7 @@
 kalman_context_t* kalman_new(
     m_t *initial_state_guess,
     kalman_state_fn state_fn,
-
+    kalman_state_to_measurement_fn measurement_fn,
     m_t* process_covariance,
     m_t* measurement_covariance) {
     if (!initial_state_guess || !state_fn || !process_covariance || !measurement_covariance) {
@@ -40,6 +40,7 @@ kalman_context_t* kalman_new(
     context->eta = sqrtf(state_len + context->lambda);
 
     context->state_fn = state_fn;
+    context->measurement_fn = measurement_fn;
     size_t sigma_point_count = 2*state_len + 1;
     if (!(context->sigma_weights_m = m_new(sigma_point_count, 1))) {
         kalman_free(context);

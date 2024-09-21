@@ -47,6 +47,7 @@ endfunction()
 # should exactly match the src/ directory except in the tests directory
 # each .c file has tests for the corresponding src file.
 add_test(test_vector "data_structures/vector.c")
+add_test(test_kalman "filtering/kalman.c")
 
 add_custom_target(
     run-tests

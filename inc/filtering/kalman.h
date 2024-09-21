@@ -59,6 +59,11 @@ typedef struct kalman_context
 } kalman_context_t;
 
 /* Create a new kalman context.  This does not take ownership (or use - it's fine to immediately free them) of any of the m_t* passed in, so you must manage those after the call. */
-kalman_context_t *kalman_new(m_t *initial_state_guess, kalman_state_fn state_fn, m_t* state_covariance, m_t* measurement_covariance);
+kalman_context_t *kalman_new(
+    m_t *initial_state_guess,
+    kalman_state_fn state_fn,
+    kalman_state_to_measurement_fn measurement_fn,
+    m_t* process_covariance,
+    m_t* measurement_covariance);
 void kalman_free(kalman_context_t *context);
 #endif

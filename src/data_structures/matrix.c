@@ -31,6 +31,21 @@ m_t* m_new(size_t rows, size_t cols)
     return nm;
 }
 
+m_t* m_identity(size_t dim) {
+    m_t* m = m_new(dim, dim);
+
+    if (!m) {
+        return NULL;
+    }
+
+    m_set_all(m, 0);
+    for (size_t d = 0; d < dim; d++) {
+        m_set(m, d, d, 1);
+    }
+
+    return m;
+}
+
 error_t m_free(m_t *m)
 {
     if (!m) return E_OK;
