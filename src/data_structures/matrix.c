@@ -6,28 +6,33 @@ m_t* m_new(size_t rows, size_t cols)
 {
     m_t *nm = NULL;
     m_data_t *d = NULL;
-    if (rows <= 0) goto fail;
-    if (cols <= 0) goto fail;
+
+    if (rows <= 0) {
+        m_free(nm);
+        return NULL;
+    }
+
+    if (cols <= 0) {
+        m_free(nm);
+        return NULL;
+    }
 
     nm = malloc(sizeof *nm);
-    if (!nm) goto fail_nm;
+    if (!nm) {
+        m_free(nm);
+        return NULL;
+    }
 
     d = malloc(rows*cols*sizeof *d);
-    if (!d) goto fail_d;
+    if (!d) {
+        m_free(nm);
+        return NULL;
+    }
 
     nm->rows = rows;
     nm->cols = cols;
     nm->data = d;
-    goto out;
 
-    fail_d:
-    free(nm);
-
-    fail_nm:
-    fail:
-    nm = NULL;
-
-    out:
     return nm;
 }
 
@@ -341,6 +346,32 @@ error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res) {
         for (size_t m_r = 0; m_r < rhs->rows; m_r++) {
             m_set(res, m_l, m_r, m_get(lhs, m_l, 0)*m_get(rhs, m_r, 0));
         }
+    }
+
+    return E_OK;
+}
+
+error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
+    if (!src || !dest) {
+        return E_NULLP;
+    }
+
+    if (!m_same_size(src, dest)) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < src->rows; m++) {
+        for (size_t n = 0; n < src->cols; n++) {
+            m_set(dest, m, n, multiplier * m_get(src, m, n));
+        }
+    }
+
+    return E_OK;
+}
+
+error_t m_invert(m_t* A, m_t* res) {
+    if (!A || !res) {
+        return E_NULLP;
     }
 
     return E_OK;

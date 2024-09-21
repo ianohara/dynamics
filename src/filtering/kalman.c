@@ -24,8 +24,15 @@ kalman_context_t* kalman_new(
         return NULL;
     }
 
-    size_t state_len = m_max_dim(initial_state_guess) + m_max_dim(process_covariance) + m_max_dim(measurement_covariance);
+    size_t aggregated_state_len = m_max_dim(initial_state_guess) + m_max_dim(process_covariance) + m_max_dim(measurement_covariance);
     size_t measurement_len = m_max_dim(measurement_covariance);
+
+    m_t* aggregated_state = m_new(aggregated_state_len, 1);
+    m_set_all(aggregated_state, 1);
+    // TODO(imo): Should set the variance values to zero or other vals?
+    for (size_t m = 0; m < initial_state_guess->rows; m++) {
+        m_set(aggregated_state, m, 0, m_get(initial_state_guess, m, 0));
+    }
 
     kalman_context_t* context = malloc(sizeof(*context));
     // Allocate and zero everything, then calculate our initial cholesky factor
@@ -36,12 +43,12 @@ kalman_context_t* kalman_new(
     context->alpha = 1e-4;
     context->beta = 2.0;
 
-    context->lambda = context->alpha*context->alpha * (state_len + context->kappa) - state_len;
-    context->eta = sqrtf(state_len + context->lambda);
+    context->lambda = context->alpha*context->alpha * (aggregated_state_len + context->kappa) - aggregated_state_len;
+    context->eta = sqrtf(aggregated_state_len + context->lambda);
 
     context->state_fn = state_fn;
     context->measurement_fn = measurement_fn;
-    size_t sigma_point_count = 2*state_len + 1;
+    size_t sigma_point_count = 2*aggregated_state_len + 1;
     if (!(context->sigma_weights_m = m_new(sigma_point_count, 1))) {
         kalman_free(context);
         return NULL;
@@ -52,35 +59,35 @@ kalman_context_t* kalman_new(
         return NULL;
     }
 
-    m_data_t weight_0_m = context->lambda / (state_len + context->lambda);
-    m_data_t weight_0_c = context->lambda / (state_len + context->lambda) + (1 - context->alpha*context->alpha + context->beta);
-    m_data_t weight_i = 1.0 / (2.0 * (state_len + context->lambda));
+    m_data_t weight_0_m = context->lambda / (aggregated_state_len + context->lambda);
+    m_data_t weight_0_c = context->lambda / (aggregated_state_len + context->lambda) + (1 - context->alpha*context->alpha + context->beta);
+    m_data_t weight_i = 1.0 / (2.0 * (aggregated_state_len + context->lambda));
     for (size_t m = 0; m < context->sigma_weights_m->rows; m++) {
         m_data_t this_weight_m = m == 0 ? weight_0_m : weight_i;
         m_data_t this_weight_c = m == 0 ? weight_0_c : weight_i;
-        if (E_OK != m_set(context->sigma_weights_m, m, 1, this_weight_m)) {
+        if (E_OK != m_set(context->sigma_weights_m, m, 0, this_weight_m)) {
             kalman_free(context);
             return NULL;
         }
 
-        if (E_OK != m_set(context->sigma_weights_c, m, 1, this_weight_c)) {
+        if (E_OK != m_set(context->sigma_weights_c, m, 0, this_weight_c)) {
             kalman_free(context);
             return NULL;
         }
     }
 
 
-    if (!(context->P_km1 = m_new(state_len, state_len))) {
+    if (!(context->P_km1 = m_new(aggregated_state_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->sqrt_P_km1 = m_new(state_len, state_len))) {
+    if (!(context->sqrt_P_km1 = m_new(aggregated_state_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->P_k_t = m_new(state_len, state_len))) {
+    if (!(context->P_k_t = m_new(aggregated_state_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
@@ -90,47 +97,47 @@ kalman_context_t* kalman_new(
         return NULL;
     }
 
-    if (!(context->P_xy = m_new(state_len, measurement_len))) {
+    if (!(context->P_xy = m_new(aggregated_state_len, measurement_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->x_hat = m_new(state_len, 1))) {
+    if (!(context->x_hat = m_new(aggregated_state_len, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->x_hatm1 = m_new(state_len, 1))) {
+    if (!(context->x_hatm1 = m_new(aggregated_state_len, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->x_hat_k_t = m_new(state_len, 1))) {
+    if (!(context->x_hat_k_t = m_new(aggregated_state_len, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->chi_k = m_new(state_len, sigma_point_count))) {
+    if (!(context->chi_k = m_new(aggregated_state_len, sigma_point_count))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->chi_km1 = m_new(state_len, sigma_point_count))) {
+    if (!(context->chi_km1 = m_new(aggregated_state_len, sigma_point_count))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->x_a = m_new(state_len, 1))) {
+    if (!(context->x_a = m_new(aggregated_state_len, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->x_b = m_new(state_len, 1))) {
+    if (!(context->x_b = m_new(aggregated_state_len, 1))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->P_a = m_new(state_len, state_len))) {
+    if (!(context->P_a = m_new(aggregated_state_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
@@ -150,29 +157,29 @@ kalman_context_t* kalman_new(
         return NULL;
     }
 
-    if (!(context->K = m_new(state_len, measurement_len))) {
+    if (!(context->K = m_new(aggregated_state_len, measurement_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->K_transpose = m_new(measurement_len, state_len))) {
+    if (!(context->K_transpose = m_new(measurement_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    if (!(context->scratch_yx = m_new(measurement_len, state_len))) {
+    if (!(context->scratch_yx = m_new(measurement_len, aggregated_state_len))) {
         kalman_free(context);
         return NULL;
     }
 
-    m_t* guess_negated = m_new(state_len, 1);
-    if (E_OK != m_negate(initial_state_guess, guess_negated)) {
+    m_t* guess_negated = m_new(aggregated_state_len, 1);
+    if (E_OK != m_negate(aggregated_state, guess_negated)) {
         m_free(guess_negated);
         kalman_free(context);
         return NULL;
     }
 
-    m_t* initial_covariance = m_new(state_len, state_len);
+    m_t* initial_covariance = m_new(aggregated_state_len, aggregated_state_len);
     if (E_OK != m_outer_product(guess_negated, guess_negated, initial_covariance)) {
         m_free(guess_negated);
         m_free(initial_covariance);

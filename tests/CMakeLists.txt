@@ -48,6 +48,7 @@ endfunction()
 # each .c file has tests for the corresponding src file.
 add_test(test_vector "data_structures/vector.c")
 add_test(test_kalman "filtering/kalman.c")
+target_link_libraries(test_kalman matrix linear_algebra_decompositions)
 
 add_custom_target(
     run-tests
