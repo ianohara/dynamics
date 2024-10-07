@@ -50,9 +50,12 @@ add_test(test_vector "data_structures/vector.c")
 add_test(test_kalman "filtering/kalman.c")
 target_link_libraries(test_kalman matrix linear_algebra_decompositions)
 
-add_custom_target(
-    run-tests
-    ALL
-    COMMAND ${test_executable}
-    DEPENDS ${test_executable}
-)
+add_test(test_linear_algebra_decompositions "linear_algebra/decompositions.c")
+target_link_libraries(test_linear_algebra_decompositions matrix linear_algebra_decompositions)
+
+# add_custom_target(
+#     run-tests
+#     ALL
+#     COMMAND ${test_executable}
+#     DEPENDS ${test_executable}
+# )

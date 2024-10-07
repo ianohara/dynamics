@@ -36,6 +36,23 @@ m_t* m_new(size_t rows, size_t cols)
     return nm;
 }
 
+m_t* m_new_from(size_t rows, size_t cols, m_data_t* data) {
+    m_t* res = m_new(rows, cols);
+
+    if (!res) {
+        return NULL;
+    }
+
+    size_t data_idx = 0;
+    for (size_t m = 0; m < rows; m++) {
+        for (size_t n = 0; n < cols; n++) {
+            m_set(res, m, n, data[data_idx++]);
+        }
+    }
+
+    return res;
+}
+
 m_t* m_identity(size_t dim) {
     m_t* m = m_new(dim, dim);
 
@@ -187,6 +204,26 @@ bool m_equal(m_t *a, m_t *b) {
     return true;
 }
 
+bool m_epsilon_equal(m_t *a, m_t *b, m_data_t epsilon) {
+    if (!a || !b) {
+        return false;
+    }
+
+    if (a->rows != b->rows || a->cols != b->cols) {
+        return false;
+    }
+
+    for (size_t m = 0; m < a->rows; m++) {
+        for (size_t n = 0; n < a->cols; n++) {
+            if (fabs(m_get(a, m, n) - m_get(b, m, n)) >= epsilon) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 error_t m_set_all(m_t* mat, m_data_t val) {
     if (!mat) {
         return E_NULLP;
@@ -220,7 +257,7 @@ error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
 
     m_data_t col_length = 0.0;
     for (size_t m = 0; m < src->rows; m++) {
-        col_length += m_get(src, m, col_idx);
+        col_length += m_get(src, m, col_idx) * m_get(src, m, col_idx);
     }
     col_length = sqrt(col_length);
 
@@ -364,14 +401,6 @@ error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
         for (size_t n = 0; n < src->cols; n++) {
             m_set(dest, m, n, multiplier * m_get(src, m, n));
         }
-    }
-
-    return E_OK;
-}
-
-error_t m_invert(m_t* A, m_t* res) {
-    if (!A || !res) {
-        return E_NULLP;
     }
 
     return E_OK;

@@ -19,6 +19,8 @@ typedef struct m
 } m_t;
 
 m_t *m_new(size_t rows, size_t cols);
+m_t *m_new_from(size_t rows, size_t cols, m_data_t *data);
+
 error_t m_free(m_t *m);
 
 /* Create and return a new square identity matrix. */
@@ -52,6 +54,9 @@ error_t m_transpose(m_t *mat, m_t *res);
 /* Returns true if both matricies have exactly equal sizes and components */
 bool m_equal(m_t *a, m_t *b);
 
+/* Returns true if all entries in a and b conform to abs(a_mn - b_mn) < epsilon */
+bool m_epsilon_equal(m_t *a, m_t* b, m_data_t epsilon);
+
 /* Set all entries of the matrix to the given value. */
 error_t m_set_all(m_t *mat, m_data_t val);
 
@@ -84,6 +89,5 @@ error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res);
 
 error_t m_scalar_multiply(m_t* src, m_data_t multiplyer, m_t* dest);
 
-error_t m_invert(m_t* A, m_t* res);
 
 #endif /* __MATRIX_H__3434343 */

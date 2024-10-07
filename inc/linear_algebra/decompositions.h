@@ -21,5 +21,8 @@ error_t la_decompositions_cholesky(m_t* A, m_t* L);
 error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R);
 
 /* Returns Q where the columns of Q are the orthonormal vectors obtained by carrying out the Gram-Schmidt process on A */
-error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q);
+error_t la_decompositions_gram_schmidt(m_t* A, m_t* Q);
+
+error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res);
+
 #endif /* __LINEAR_ALGEBRA_DECOMPOSITONS__ */

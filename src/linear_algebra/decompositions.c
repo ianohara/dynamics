@@ -57,7 +57,7 @@ error_t la_decompositions_cholesky(m_t* A, m_t* L) {
 }
 
 // See here for stable gram schmidt: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Numerical_stability
-error_t la_decomopositions_gram_schmidt(m_t* A, m_t* Q) {
+error_t la_decompositions_gram_schmidt(m_t* A, m_t* Q) {
     if (!A || !Q) {
         return E_NULLP;
     }
@@ -118,7 +118,7 @@ error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
     }
 
     // This will zero out Q for us.
-    if (E_OK != la_decomopositions_gram_schmidt(A, Q)) {
+    if (E_OK != la_decompositions_gram_schmidt(A, Q)) {
         return E_ERR;
     }
 
@@ -131,6 +131,14 @@ error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
 
             m_set(R, m, n, e_m_dot_a_n);
         }
+    }
+
+    return E_OK;
+}
+
+error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
+    if (!A || !res) {
+        return E_NULLP;
     }
 
     return E_OK;

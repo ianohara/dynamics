@@ -350,7 +350,7 @@ error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measureme
         m_scalar_multiply(context->P_xy, m_get(context->sigma_weights_c, n, 0), context->P_xy);
     }
 
-    m_invert(context->P_yy, context->P_a);
+    la_decompositions_invert_positive_semi_definite(context->P_yy, context->P_a);
 
     m_mult(context->P_xy, context->P_a, context->K);
 
