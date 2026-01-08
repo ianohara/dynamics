@@ -42,6 +42,7 @@ kalman_context_t* kalman_new(
 
     context->alpha = 1e-4;
     context->beta = 2.0;
+    context->kappa = 0.0;
 
     context->lambda = context->alpha*context->alpha * (aggregated_state_len + context->kappa) - aggregated_state_len;
     context->eta = sqrtf(aggregated_state_len + context->lambda);
