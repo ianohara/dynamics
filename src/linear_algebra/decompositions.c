@@ -205,3 +205,84 @@ error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
 
     return E_OK;
 }
+
+/* Cholesky rank-1 update: L*L^T + x*x^T = L'*L'^T
+ * Uses the algorithm from LINPACK (dchud).
+ * L is modified in place, x is used as workspace and modified.
+ */
+error_t la_decompositions_cholesky_update(m_t* L, m_t* x) {
+    if (!L || !x) {
+        return E_NULLP;
+    }
+
+    if (!m_is_square(L) || !m_is_vector(x) || L->rows != x->rows) {
+        return E_VAL;
+    }
+
+    size_t n = L->rows;
+
+    for (size_t k = 0; k < n; k++) {
+        m_data_t Lkk = m_get(L, k, k);
+        m_data_t xk = m_get(x, k, 0);
+
+        m_data_t r = sqrt(Lkk * Lkk + xk * xk);
+        m_data_t c = r / Lkk;
+        m_data_t s = xk / Lkk;
+
+        m_set(L, k, k, r);
+
+        for (size_t i = k + 1; i < n; i++) {
+            m_data_t Lik = m_get(L, i, k);
+            m_data_t xi = m_get(x, i, 0);
+
+            m_set(L, i, k, (Lik + s * xi) / c);
+            m_set(x, i, 0, c * xi - s * m_get(L, i, k));
+        }
+    }
+
+    return E_OK;
+}
+
+/* Cholesky rank-1 downdate: L*L^T - x*x^T = L'*L'^T
+ * Uses the algorithm from LINPACK (dchdd).
+ * L is modified in place, x is used as workspace and modified.
+ * Returns E_VAL if result would not be positive definite.
+ */
+error_t la_decompositions_cholesky_downdate(m_t* L, m_t* x) {
+    if (!L || !x) {
+        return E_NULLP;
+    }
+
+    if (!m_is_square(L) || !m_is_vector(x) || L->rows != x->rows) {
+        return E_VAL;
+    }
+
+    size_t n = L->rows;
+
+    for (size_t k = 0; k < n; k++) {
+        m_data_t Lkk = m_get(L, k, k);
+        m_data_t xk = m_get(x, k, 0);
+
+        m_data_t r_sq = Lkk * Lkk - xk * xk;
+        if (r_sq <= 0) {
+            // Result would not be positive definite
+            return E_VAL;
+        }
+
+        m_data_t r = sqrt(r_sq);
+        m_data_t c = r / Lkk;
+        m_data_t s = xk / Lkk;
+
+        m_set(L, k, k, r);
+
+        for (size_t i = k + 1; i < n; i++) {
+            m_data_t Lik = m_get(L, i, k);
+            m_data_t xi = m_get(x, i, 0);
+
+            m_set(L, i, k, (Lik - s * xi) / c);
+            m_set(x, i, 0, c * xi - s * m_get(L, i, k));
+        }
+    }
+
+    return E_OK;
+}

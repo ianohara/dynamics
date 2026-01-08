@@ -495,3 +495,546 @@ error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out) {
 
     return m_copy(context->P_km1, covariance_out);
 }
+
+// ============================================================================
+// Square-Root Unscented Kalman Filter Implementation
+// ============================================================================
+
+kalman_sqrt_context_t* kalman_sqrt_new(
+    m_t *initial_state_guess,
+    m_t *initial_covariance,
+    kalman_state_fn state_fn,
+    kalman_state_to_measurement_fn measurement_fn,
+    m_t *process_covariance,
+    m_t *measurement_covariance) {
+
+    if (!initial_state_guess || !state_fn || !process_covariance || !measurement_covariance) {
+        return NULL;
+    }
+
+    if (!m_is_vector(initial_state_guess)) {
+        return NULL;
+    }
+
+    if (!m_is_square(process_covariance) || process_covariance->rows != initial_state_guess->rows) {
+        return NULL;
+    }
+
+    if (!m_is_square(measurement_covariance)) {
+        return NULL;
+    }
+
+    if (initial_covariance) {
+        if (!m_is_square(initial_covariance) || initial_covariance->rows != initial_state_guess->rows) {
+            return NULL;
+        }
+    }
+
+    size_t n = initial_state_guess->rows;
+    size_t m = measurement_covariance->rows;
+    size_t num_sigma = 2 * n + 1;
+
+    kalman_sqrt_context_t* ctx = malloc(sizeof(*ctx));
+    if (!ctx) {
+        return NULL;
+    }
+    memset(ctx, 0, sizeof(*ctx));
+
+    ctx->state_len = n;
+    ctx->measurement_len = m;
+
+    // UKF parameters
+    ctx->alpha = 1e-3;
+    ctx->beta = 2.0;
+    ctx->kappa = 0.0;
+
+    ctx->lambda = ctx->alpha * ctx->alpha * (n + ctx->kappa) - n;
+    ctx->gamma = sqrt(n + ctx->lambda);
+
+    ctx->state_fn = state_fn;
+    ctx->measurement_fn = measurement_fn;
+
+    // Allocate weights
+    ctx->Wm = m_new(num_sigma, 1);
+    ctx->Wc = m_new(num_sigma, 1);
+    if (!ctx->Wm || !ctx->Wc) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Calculate weights
+    m_data_t Wm_0 = ctx->lambda / (n + ctx->lambda);
+    ctx->Wc_0 = Wm_0 + (1 - ctx->alpha * ctx->alpha + ctx->beta);
+    m_data_t Wi = 1.0 / (2.0 * (n + ctx->lambda));
+
+    m_set(ctx->Wm, 0, 0, Wm_0);
+    m_set(ctx->Wc, 0, 0, ctx->Wc_0);
+    for (size_t i = 1; i < num_sigma; i++) {
+        m_set(ctx->Wm, i, 0, Wi);
+        m_set(ctx->Wc, i, 0, Wi);
+    }
+
+    // Allocate sqrt of noise covariances
+    ctx->sqrt_Q = m_new(n, n);
+    ctx->sqrt_R = m_new(m, m);
+    if (!ctx->sqrt_Q || !ctx->sqrt_R) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Compute sqrt(Q) and sqrt(R) via Cholesky
+    if (E_OK != la_decompositions_cholesky(process_covariance, ctx->sqrt_Q)) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+    if (E_OK != la_decompositions_cholesky(measurement_covariance, ctx->sqrt_R)) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Allocate state estimate and sqrt covariance
+    ctx->x_hat = m_new(n, 1);
+    ctx->S = m_new(n, n);
+    if (!ctx->x_hat || !ctx->S) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Initialize state
+    m_copy(initial_state_guess, ctx->x_hat);
+
+    // Initialize S (sqrt of covariance)
+    m_t* init_cov = initial_covariance ? initial_covariance : process_covariance;
+    if (E_OK != la_decompositions_cholesky(init_cov, ctx->S)) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Allocate sigma points
+    ctx->chi = m_new(n, num_sigma);
+    ctx->chi_prop = m_new(n, num_sigma);
+    if (!ctx->chi || !ctx->chi_prop) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Allocate measurement matrices
+    ctx->Y = m_new(m, num_sigma);
+    ctx->y_hat = m_new(m, 1);
+    if (!ctx->Y || !ctx->y_hat) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Allocate cross-covariance and gain
+    ctx->Pxy = m_new(n, m);
+    ctx->Sy = m_new(m, m);
+    ctx->K = m_new(n, m);
+    if (!ctx->Pxy || !ctx->Sy || !ctx->K) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // Allocate scratch matrices
+    ctx->x_scratch = m_new(n, 1);
+    ctx->y_scratch = m_new(m, 1);
+    if (!ctx->x_scratch || !ctx->y_scratch) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    // QR matrices - need enough rows for compound matrix
+    // For time update: (2n) x n matrix
+    // For measurement update: (2n + m) x m matrix (larger)
+    size_t qr_rows = 2 * n + m;
+    size_t qr_cols = (n > m) ? n : m;
+    ctx->qr_input = m_new(qr_rows, qr_cols);
+    ctx->qr_Q = m_new(qr_rows, qr_rows);
+    ctx->qr_R = m_new(qr_rows, qr_cols);
+    if (!ctx->qr_input || !ctx->qr_Q || !ctx->qr_R) {
+        kalman_sqrt_free(ctx);
+        return NULL;
+    }
+
+    return ctx;
+}
+
+void kalman_sqrt_free(kalman_sqrt_context_t *ctx) {
+    if (!ctx) return;
+
+    m_free(ctx->Wm);
+    m_free(ctx->Wc);
+    m_free(ctx->sqrt_Q);
+    m_free(ctx->sqrt_R);
+    m_free(ctx->x_hat);
+    m_free(ctx->S);
+    m_free(ctx->chi);
+    m_free(ctx->chi_prop);
+    m_free(ctx->Y);
+    m_free(ctx->y_hat);
+    m_free(ctx->Pxy);
+    m_free(ctx->Sy);
+    m_free(ctx->K);
+    m_free(ctx->x_scratch);
+    m_free(ctx->y_scratch);
+    m_free(ctx->qr_input);
+    m_free(ctx->qr_Q);
+    m_free(ctx->qr_R);
+
+    free(ctx);
+}
+
+// Helper: Generate sigma points from x and S
+static error_t _sqrt_generate_sigma_points(kalman_sqrt_context_t* ctx) {
+    size_t n = ctx->state_len;
+
+    // First sigma point is the mean
+    m_copy_column(ctx->x_hat, 0, ctx->chi, 0);
+
+    // Sigma points 1 to n: x + gamma * S[:,i]
+    for (size_t i = 0; i < n; i++) {
+        m_copy_column(ctx->x_hat, 0, ctx->chi, i + 1);
+        m_add_scaled_column(ctx->S, i, ctx->gamma, ctx->chi, i + 1);
+    }
+
+    // Sigma points n+1 to 2n: x - gamma * S[:,i]
+    for (size_t i = 0; i < n; i++) {
+        m_copy_column(ctx->x_hat, 0, ctx->chi, n + i + 1);
+        m_add_scaled_column(ctx->S, i, -ctx->gamma, ctx->chi, n + i + 1);
+    }
+
+    return E_OK;
+}
+
+// Helper: Compute weighted mean of columns
+static error_t _sqrt_weighted_mean(m_t* points, m_t* weights, m_t* mean) {
+    m_set_all(mean, 0);
+    for (size_t i = 0; i < points->cols; i++) {
+        m_data_t w = m_get(weights, i, 0);
+        m_add_scaled_column(points, i, w, mean, 0);
+    }
+    return E_OK;
+}
+
+error_t kalman_sqrt_step(kalman_sqrt_context_t *ctx, m_t *input_vector, m_t *measurement) {
+    if (!ctx || !input_vector || !measurement) {
+        return E_NULLP;
+    }
+
+    size_t n = ctx->state_len;
+    size_t m = ctx->measurement_len;
+    size_t num_sigma = 2 * n + 1;
+
+    // ========== PREDICTION STEP ==========
+
+    // Generate sigma points
+    _sqrt_generate_sigma_points(ctx);
+
+    // Propagate sigma points through state function
+    m_t* prop_out = m_new(n, 1);
+    if (!prop_out) return E_ERR;
+
+    for (size_t i = 0; i < num_sigma; i++) {
+        m_copy_column(ctx->chi, i, ctx->x_scratch, 0);
+        ctx->state_fn(ctx->x_scratch, input_vector, prop_out);
+        m_copy_column(prop_out, 0, ctx->chi_prop, i);
+    }
+    m_free(prop_out);
+
+    // Compute predicted mean
+    _sqrt_weighted_mean(ctx->chi_prop, ctx->Wm, ctx->x_hat);
+
+    // Compute predicted sqrt covariance using QR decomposition
+    // Form compound matrix: [ sqrt(Wi) * (chi_prop[:,i] - x_hat)^T ]
+    //                       [ sqrt_Q^T                             ]
+    // Then do QR, and S_pred = R^T (the R from QR of this compound matrix transposed)
+
+    // For simplicity, use a different approach: direct Cholesky updates
+    // Start with sqrt_Q, then do rank-1 updates for each sigma point deviation
+
+    // Actually, let's use a simpler compound matrix approach
+    // Build matrix where columns are sqrt(Wi)*(chi_i - x_hat) for i=1..2n, plus sqrt_Q columns
+    // Then take QR and extract upper triangular R
+
+    // Simpler approach: compute predicted P, then Cholesky
+    // P_pred = sum Wi * (chi_i - x_hat)(chi_i - x_hat)^T + Q
+
+    m_t* P_pred = m_new(n, n);
+    m_t* outer = m_new(n, n);
+    if (!P_pred || !outer) {
+        m_free(P_pred);
+        m_free(outer);
+        return E_ERR;
+    }
+
+    m_set_all(P_pred, 0);
+    for (size_t i = 0; i < num_sigma; i++) {
+        m_copy_column(ctx->chi_prop, i, ctx->x_scratch, 0);
+        m_add_scaled_column(ctx->x_hat, 0, -1.0, ctx->x_scratch, 0);
+
+        m_outer_product(ctx->x_scratch, ctx->x_scratch, outer);
+        m_data_t w = m_get(ctx->Wc, i, 0);
+        m_scalar_multiply(outer, w, outer);
+        m_add(P_pred, outer, P_pred);
+    }
+
+    // Add Q
+    m_t* Q_full = m_new(n, n);
+    if (!Q_full) {
+        m_free(P_pred);
+        m_free(outer);
+        return E_ERR;
+    }
+    // Q = sqrt_Q * sqrt_Q^T
+    m_t* sqrt_Q_T = m_new(n, n);
+    if (!sqrt_Q_T) {
+        m_free(P_pred);
+        m_free(outer);
+        m_free(Q_full);
+        return E_ERR;
+    }
+    m_transpose(ctx->sqrt_Q, sqrt_Q_T);
+    m_mult(ctx->sqrt_Q, sqrt_Q_T, Q_full);
+    m_add(P_pred, Q_full, P_pred);
+    m_free(sqrt_Q_T);
+    m_free(Q_full);
+
+    // Compute sqrt of P_pred
+    if (E_OK != la_decompositions_cholesky(P_pred, ctx->S)) {
+        m_free(P_pred);
+        m_free(outer);
+        return E_ERR;
+    }
+    m_free(P_pred);
+
+    // ========== MEASUREMENT UPDATE STEP ==========
+
+    // Transform sigma points through measurement function
+    for (size_t i = 0; i < num_sigma; i++) {
+        m_copy_column(ctx->chi_prop, i, ctx->x_scratch, 0);
+        ctx->measurement_fn(ctx->x_scratch, NULL, ctx->y_scratch);
+        m_copy_column(ctx->y_scratch, 0, ctx->Y, i);
+    }
+
+    // Compute predicted measurement mean
+    _sqrt_weighted_mean(ctx->Y, ctx->Wm, ctx->y_hat);
+
+    // Compute Pyy (measurement covariance) and take sqrt
+    m_t* Pyy = m_new(m, m);
+    m_t* outer_y = m_new(m, m);
+    if (!Pyy || !outer_y) {
+        m_free(Pyy);
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+
+    m_set_all(Pyy, 0);
+    for (size_t i = 0; i < num_sigma; i++) {
+        m_copy_column(ctx->Y, i, ctx->y_scratch, 0);
+        m_add_scaled_column(ctx->y_hat, 0, -1.0, ctx->y_scratch, 0);
+
+        m_outer_product(ctx->y_scratch, ctx->y_scratch, outer_y);
+        m_data_t w = m_get(ctx->Wc, i, 0);
+        m_scalar_multiply(outer_y, w, outer_y);
+        m_add(Pyy, outer_y, Pyy);
+    }
+
+    // Add R
+    m_t* R_full = m_new(m, m);
+    m_t* sqrt_R_T = m_new(m, m);
+    if (!R_full || !sqrt_R_T) {
+        m_free(Pyy);
+        m_free(outer_y);
+        m_free(outer);
+        m_free(R_full);
+        m_free(sqrt_R_T);
+        return E_ERR;
+    }
+    m_transpose(ctx->sqrt_R, sqrt_R_T);
+    m_mult(ctx->sqrt_R, sqrt_R_T, R_full);
+    m_add(Pyy, R_full, Pyy);
+    m_free(sqrt_R_T);
+    m_free(R_full);
+
+    // Sy = chol(Pyy)
+    if (E_OK != la_decompositions_cholesky(Pyy, ctx->Sy)) {
+        m_free(Pyy);
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+    m_free(Pyy);
+
+    // Compute cross-covariance Pxy
+    m_set_all(ctx->Pxy, 0);
+    for (size_t i = 0; i < num_sigma; i++) {
+        m_copy_column(ctx->chi_prop, i, ctx->x_scratch, 0);
+        m_add_scaled_column(ctx->x_hat, 0, -1.0, ctx->x_scratch, 0);
+
+        m_copy_column(ctx->Y, i, ctx->y_scratch, 0);
+        m_add_scaled_column(ctx->y_hat, 0, -1.0, ctx->y_scratch, 0);
+
+        // Add w * x_scratch * y_scratch^T to Pxy
+        m_data_t w = m_get(ctx->Wc, i, 0);
+        for (size_t r = 0; r < n; r++) {
+            for (size_t c = 0; c < m; c++) {
+                m_data_t val = m_get(ctx->Pxy, r, c);
+                val += w * m_get(ctx->x_scratch, r, 0) * m_get(ctx->y_scratch, c, 0);
+                m_set(ctx->Pxy, r, c, val);
+            }
+        }
+    }
+
+    // Compute Kalman gain: K = Pxy * Sy^-T * Sy^-1 = Pxy * (Sy * Sy^T)^-1
+    // Or equivalently, solve Sy * Sy^T * K^T = Pxy^T for K
+
+    // For simplicity, compute Pyy^-1 and multiply
+    m_t* Sy_inv = m_new(m, m);
+    if (!Sy_inv) {
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+
+    // Invert Sy (lower triangular)
+    m_set_all(Sy_inv, 0);
+    for (size_t j = 0; j < m; j++) {
+        for (size_t i = 0; i < m; i++) {
+            if (i < j) {
+                m_set(Sy_inv, i, j, 0);
+            } else if (i == j) {
+                m_set(Sy_inv, i, j, 1.0 / m_get(ctx->Sy, i, i));
+            } else {
+                m_data_t sum = 0;
+                for (size_t k = j; k < i; k++) {
+                    sum += m_get(ctx->Sy, i, k) * m_get(Sy_inv, k, j);
+                }
+                m_set(Sy_inv, i, j, -sum / m_get(ctx->Sy, i, i));
+            }
+        }
+    }
+
+    // Pyy_inv = Sy_inv^T * Sy_inv
+    m_t* Sy_inv_T = m_new(m, m);
+    m_t* Pyy_inv = m_new(m, m);
+    if (!Sy_inv_T || !Pyy_inv) {
+        m_free(Sy_inv);
+        m_free(Sy_inv_T);
+        m_free(Pyy_inv);
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+    m_transpose(Sy_inv, Sy_inv_T);
+    m_mult(Sy_inv_T, Sy_inv, Pyy_inv);
+
+    // K = Pxy * Pyy_inv
+    m_mult(ctx->Pxy, Pyy_inv, ctx->K);
+
+    m_free(Sy_inv);
+    m_free(Sy_inv_T);
+    m_free(Pyy_inv);
+
+    // ========== STATE UPDATE ==========
+
+    // innovation = measurement - y_hat
+    m_copy(measurement, ctx->y_scratch);
+    m_add_scaled_column(ctx->y_hat, 0, -1.0, ctx->y_scratch, 0);
+
+    // x_hat = x_hat + K * innovation
+    m_mult(ctx->K, ctx->y_scratch, ctx->x_scratch);
+    m_add_scaled_column(ctx->x_scratch, 0, 1.0, ctx->x_hat, 0);
+
+    // ========== COVARIANCE UPDATE ==========
+    // S_new = cholupdate(S, K*Sy, '-') for each column of K*Sy
+
+    m_t* U = m_new(n, m);
+    if (!U) {
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+    m_mult(ctx->K, ctx->Sy, U);
+
+    // Downdate S with each column of U
+    m_t* u_col = m_new(n, 1);
+    if (!u_col) {
+        m_free(U);
+        m_free(outer_y);
+        m_free(outer);
+        return E_ERR;
+    }
+
+    for (size_t j = 0; j < m; j++) {
+        m_copy_column(U, j, u_col, 0);
+        if (E_OK != la_decompositions_cholesky_downdate(ctx->S, u_col)) {
+            // Downdate failed - fall back to recomputing S from scratch
+            // Compute P = S*S^T - U*U^T, then S = chol(P)
+            m_t* S_T = m_new(n, n);
+            m_t* P_new = m_new(n, n);
+            m_t* U_T = m_new(m, n);
+            m_t* UUT = m_new(n, n);
+            if (S_T && P_new && U_T && UUT) {
+                m_transpose(ctx->S, S_T);
+                m_mult(ctx->S, S_T, P_new);
+                m_transpose(U, U_T);
+                m_mult(U, U_T, UUT);
+                m_scalar_multiply(UUT, -1.0, UUT);
+                m_add(P_new, UUT, P_new);
+                la_decompositions_cholesky(P_new, ctx->S);
+            }
+            m_free(S_T);
+            m_free(P_new);
+            m_free(U_T);
+            m_free(UUT);
+            break;
+        }
+    }
+
+    m_free(u_col);
+    m_free(U);
+    m_free(outer_y);
+    m_free(outer);
+
+    return E_OK;
+}
+
+error_t kalman_sqrt_get_state(kalman_sqrt_context_t *ctx, m_t *state_out) {
+    if (!ctx || !state_out) {
+        return E_NULLP;
+    }
+    if (state_out->rows != ctx->state_len || state_out->cols != 1) {
+        return E_VAL;
+    }
+    return m_copy(ctx->x_hat, state_out);
+}
+
+error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *ctx, m_t *covariance_out) {
+    if (!ctx || !covariance_out) {
+        return E_NULLP;
+    }
+    if (covariance_out->rows != ctx->state_len || covariance_out->cols != ctx->state_len) {
+        return E_VAL;
+    }
+
+    // P = S * S^T
+    m_t* S_T = m_new(ctx->state_len, ctx->state_len);
+    if (!S_T) {
+        return E_ERR;
+    }
+    m_transpose(ctx->S, S_T);
+    m_mult(ctx->S, S_T, covariance_out);
+    m_free(S_T);
+    return E_OK;
+}
+
+error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *ctx, m_t *sqrt_cov_out) {
+    if (!ctx || !sqrt_cov_out) {
+        return E_NULLP;
+    }
+    if (sqrt_cov_out->rows != ctx->state_len || sqrt_cov_out->cols != ctx->state_len) {
+        return E_VAL;
+    }
+    return m_copy(ctx->S, sqrt_cov_out);
+}

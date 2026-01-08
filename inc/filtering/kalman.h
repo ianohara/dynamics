@@ -89,4 +89,93 @@ error_t kalman_get_state(kalman_context_t* context, m_t* state_out);
 /* Get the current state covariance estimate. Copies the internal covariance into the provided matrix. */
 error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out);
 
+// ============================================================================
+// Square-Root Unscented Kalman Filter (SR-UKF)
+// More numerically stable - propagates square root of covariance directly.
+// Based on "The Square-Root Unscented Kalman Filter for State and
+// Parameter-Estimation" by van der Merwe and Wan.
+// ============================================================================
+
+typedef struct kalman_sqrt_context
+{
+    /* Alpha must hold to: 1e-4 <= alpha <= 1*/
+    m_data_t alpha;
+
+    /* Beta of 2 is best for gaussian distributed state vectors */
+    m_data_t beta;
+
+    /* Kappa is normally set to 0 */
+    m_data_t kappa;
+
+    // Dimensions
+    size_t state_len;
+    size_t measurement_len;
+
+    // Derived parameters
+    m_data_t lambda;
+    m_data_t gamma;  // sqrt(state_len + lambda)
+
+    // Sigma point weights
+    m_t *Wm;  // Weights for mean calculation
+    m_t *Wc;  // Weights for covariance calculation
+    m_data_t Wc_0;  // First covariance weight (may be negative)
+
+    // Square roots of noise covariances
+    m_t *sqrt_Q;  // sqrt(process_covariance)
+    m_t *sqrt_R;  // sqrt(measurement_covariance)
+
+    // State estimate and square root of covariance
+    m_t *x_hat;      // Current state estimate
+    m_t *S;          // Square root of covariance (lower triangular, P = S*S^T)
+
+    // Sigma points
+    m_t *chi;        // Sigma points matrix (state_len x 2*state_len+1)
+    m_t *chi_prop;   // Propagated sigma points
+
+    // Measurement sigma points
+    m_t *Y;          // Measurement sigma points (measurement_len x 2*state_len+1)
+    m_t *y_hat;      // Predicted measurement mean
+
+    // Cross-covariance and Kalman gain
+    m_t *Pxy;        // Cross-covariance
+    m_t *Sy;         // Square root of measurement covariance
+    m_t *K;          // Kalman gain
+
+    // Scratch matrices
+    m_t *x_scratch;
+    m_t *y_scratch;
+    m_t *qr_input;   // For QR decomposition input
+    m_t *qr_Q;       // Q from QR decomposition
+    m_t *qr_R;       // R from QR decomposition
+
+    kalman_state_fn state_fn;
+    kalman_state_to_measurement_fn measurement_fn;
+} kalman_sqrt_context_t;
+
+/* Create a new square-root Kalman filter context.
+ *
+ * initial_covariance: Initial state covariance estimate. If NULL, uses process_covariance.
+ * Note: The square root of initial_covariance is computed internally.
+ */
+kalman_sqrt_context_t *kalman_sqrt_new(
+    m_t *initial_state_guess,
+    m_t *initial_covariance,
+    kalman_state_fn state_fn,
+    kalman_state_to_measurement_fn measurement_fn,
+    m_t *process_covariance,
+    m_t *measurement_covariance);
+
+void kalman_sqrt_free(kalman_sqrt_context_t *context);
+
+error_t kalman_sqrt_step(kalman_sqrt_context_t *context, m_t *input_vector, m_t *measurement);
+
+/* Get the current state estimate. */
+error_t kalman_sqrt_get_state(kalman_sqrt_context_t *context, m_t *state_out);
+
+/* Get the current state covariance estimate (reconstructs P = S*S^T). */
+error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *context, m_t *covariance_out);
+
+/* Get the square root of the covariance directly (S where P = S*S^T). */
+error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *context, m_t *sqrt_cov_out);
+
 #endif
