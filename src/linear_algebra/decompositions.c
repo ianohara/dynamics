@@ -136,10 +136,72 @@ error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
     return E_OK;
 }
 
+/* Invert a positive semi-definite matrix using Cholesky decomposition.
+ * A = L * L^T, so A^-1 = (L^-1)^T * L^-1
+ */
 error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
     if (!A || !res) {
         return E_NULLP;
     }
+
+    if (!m_is_square(A) || !m_same_size(A, res)) {
+        return E_VAL;
+    }
+
+    size_t n = A->rows;
+
+    // Allocate temporary matrices for L and L_inv
+    m_t* L = m_new(n, n);
+    m_t* L_inv = m_new(n, n);
+    m_t* L_inv_T = m_new(n, n);
+
+    if (!L || !L_inv || !L_inv_T) {
+        m_free(L);
+        m_free(L_inv);
+        m_free(L_inv_T);
+        return E_ERR;
+    }
+
+    // Compute Cholesky decomposition: A = L * L^T
+    if (E_OK != la_decompositions_cholesky(A, L)) {
+        m_free(L);
+        m_free(L_inv);
+        m_free(L_inv_T);
+        return E_ERR;
+    }
+
+    // Compute L^-1 using forward substitution
+    // For each column j of L_inv, solve L * x = e_j
+    m_set_all(L_inv, 0);
+    for (size_t j = 0; j < n; j++) {
+        for (size_t i = 0; i < n; i++) {
+            if (i < j) {
+                // L_inv[i][j] = 0 (upper triangular part)
+                m_set(L_inv, i, j, 0);
+            } else if (i == j) {
+                // Diagonal: L_inv[i][i] = 1 / L[i][i]
+                m_set(L_inv, i, j, 1.0 / m_get(L, i, i));
+            } else {
+                // Below diagonal: solve using forward substitution
+                // L_inv[i][j] = -sum(L[i][k] * L_inv[k][j]) / L[i][i] for k < i
+                m_data_t sum = 0;
+                for (size_t k = j; k < i; k++) {
+                    sum += m_get(L, i, k) * m_get(L_inv, k, j);
+                }
+                m_set(L_inv, i, j, -sum / m_get(L, i, i));
+            }
+        }
+    }
+
+    // Compute L_inv^T
+    m_transpose(L_inv, L_inv_T);
+
+    // Compute A^-1 = L_inv^T * L_inv
+    m_mult(L_inv_T, L_inv, res);
+
+    m_free(L);
+    m_free(L_inv);
+    m_free(L_inv_T);
 
     return E_OK;
 }
