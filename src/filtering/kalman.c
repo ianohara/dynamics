@@ -6,12 +6,20 @@
 
 kalman_context_t* kalman_new(
     m_t *initial_state_guess,
+    m_t *initial_covariance,
     kalman_state_fn state_fn,
     kalman_state_to_measurement_fn measurement_fn,
     m_t* process_covariance,
     m_t* measurement_covariance) {
     if (!initial_state_guess || !state_fn || !process_covariance || !measurement_covariance) {
         return NULL;
+    }
+
+    // If initial_covariance provided, validate it
+    if (initial_covariance) {
+        if (!m_is_square(initial_covariance) || initial_covariance->rows != initial_state_guess->rows) {
+            return NULL;
+        }
     }
 
     if (!m_is_vector(initial_state_guess)) {
@@ -202,8 +210,13 @@ kalman_context_t* kalman_new(
     // Initialize state estimate from guess
     m_copy(initial_state_guess, context->x_hat);
 
-    // Initialize covariance (use process covariance as initial uncertainty)
-    m_copy(process_covariance, context->P_km1);
+    // Initialize covariance
+    if (initial_covariance) {
+        m_copy(initial_covariance, context->P_km1);
+    } else {
+        // Default to process covariance if no initial covariance given
+        m_copy(process_covariance, context->P_km1);
+    }
 
     return context;
 }

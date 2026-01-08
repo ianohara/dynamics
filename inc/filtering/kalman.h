@@ -68,9 +68,13 @@ typedef struct kalman_context
     kalman_state_to_measurement_fn measurement_fn;
 } kalman_context_t;
 
-/* Create a new kalman context.  This does not take ownership (or use - it's fine to immediately free them) of any of the m_t* passed in, so you must manage those after the call. */
+/* Create a new kalman context.  This does not take ownership (or use - it's fine to immediately free them) of any of the m_t* passed in, so you must manage those after the call.
+ *
+ * initial_covariance: Initial state covariance estimate. If NULL, uses process_covariance as default.
+ */
 kalman_context_t *kalman_new(
     m_t *initial_state_guess,
+    m_t *initial_covariance,
     kalman_state_fn state_fn,
     kalman_state_to_measurement_fn measurement_fn,
     m_t* process_covariance,
