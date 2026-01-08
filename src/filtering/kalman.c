@@ -245,7 +245,7 @@ static error_t _kalman_calc_sigmas(kalman_context_t* context) {
             return E_VAL;
         }
 
-        if (E_OK != m_add_scaled_column(context->sqrt_P_km1, n - 1, context->eta, context->chi_km1, sigma_plus_minus_count + n)) {
+        if (E_OK != m_add_scaled_column(context->sqrt_P_km1, n - 1, -context->eta, context->chi_km1, sigma_plus_minus_count + n)) {
             return E_VAL;
         }
     }
