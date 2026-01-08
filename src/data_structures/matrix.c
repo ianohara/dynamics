@@ -405,3 +405,21 @@ error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
 
     return E_OK;
 }
+
+error_t m_copy(m_t* src, m_t* dest) {
+    if (!src || !dest) {
+        return E_NULLP;
+    }
+
+    if (!m_same_size(src, dest)) {
+        return E_VAL;
+    }
+
+    for (size_t m = 0; m < src->rows; m++) {
+        for (size_t n = 0; n < src->cols; n++) {
+            m_set(dest, m, n, m_get(src, m, n));
+        }
+    }
+
+    return E_OK;
+}

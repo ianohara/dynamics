@@ -89,5 +89,7 @@ error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res);
 
 error_t m_scalar_multiply(m_t* src, m_data_t multiplyer, m_t* dest);
 
+/* Copy entire matrix src to dest. They must have the same dimensions. */
+error_t m_copy(m_t* src, m_t* dest);
 
 #endif /* __MATRIX_H__3434343 */
