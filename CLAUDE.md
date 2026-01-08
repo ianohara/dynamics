@@ -9,16 +9,16 @@ A pure C99 numerical computing library for dynamics problems, focusing on Kalman
 ## Build Commands
 
 ```bash
-# Build
-mkdir build && cd build
-cmake ..
-make
+# Build and test (preferred)
+./build.sh --test
 
-# Run tests
-./tests
+# Build only
+./build.sh
 ```
 
 Build uses GCC with strict flags: `-std=gnu99 -Wall -Wextra -Wfatal-errors -Werror`
+
+The build script uses `.build/` directory for CMake output.
 
 ## Architecture
 
@@ -70,6 +70,39 @@ For floating-point returns, `V_NAN` signals errors.
 Uses the Clar test framework (git submodule in `tests/clar`). Test files mirror source structure.
 
 Key test macros: `cl_assert()`, `cl_assert_equal_i_()`
+
+## Kalman Filter API
+
+The Unscented Kalman Filter (UKF) requires user-defined callback functions:
+
+```c
+// State transition: x_next = f(x, input)
+typedef error_t (*kalman_state_fn)(m_t *x, m_t *v, m_t *x_next);
+
+// Measurement: y = h(x)
+typedef error_t (*kalman_state_to_measurement_fn)(m_t* x, m_t *n, m_t *y_next);
+```
+
+Basic usage:
+```c
+kalman_context_t *kf = kalman_new(
+    initial_state,      // Column vector (n x 1)
+    initial_covariance, // Initial uncertainty (n x n), or NULL to use Q
+    state_fn,           // State transition callback
+    measurement_fn,     // Measurement callback
+    Q,                  // Process noise covariance (n x n)
+    R                   // Measurement noise covariance (m x m)
+);
+
+// Run filter steps
+kalman_step(kf, input, measurement);
+
+// Get results
+kalman_get_state(kf, state_out);
+kalman_get_covariance(kf, cov_out);
+
+kalman_free(kf);
+```
 
 ## Key Files
 
