@@ -19,6 +19,10 @@ typedef struct kalman_context
     /* Kappa is normally set to 0 */
     m_data_t kappa;
 
+    // Dimensions
+    size_t state_len;
+    size_t measurement_len;
+
     // Any of the fields with leading underscores are internal scratch pad values that you
     // should not touch.
     m_data_t lambda;
@@ -26,6 +30,10 @@ typedef struct kalman_context
 
     m_t *sigma_weights_m;
     m_t *sigma_weights_c;
+
+    // Process and measurement noise covariances
+    m_t *Q;  // Process noise covariance
+    m_t *R;  // Measurement noise covariance
 
     m_t *P_km1;
     m_t *sqrt_P_km1;
@@ -45,10 +53,12 @@ typedef struct kalman_context
     m_t* x_b;
     m_t* x_a;
     m_t *P_a;
+    m_t *P_b;  // Additional scratch for covariance accumulation
 
     m_t *Y_k;
     m_t *y_hat_k_t;
     m_t *y_a;
+    m_t *y_b;  // Additional scratch for measurement covariance accumulation
 
     m_t *K;
     m_t *K_transpose;
@@ -68,5 +78,11 @@ kalman_context_t *kalman_new(
 void kalman_free(kalman_context_t *context);
 
 error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement);
+
+/* Get the current state estimate. Copies the internal state into the provided matrix. */
+error_t kalman_get_state(kalman_context_t* context, m_t* state_out);
+
+/* Get the current state covariance estimate. Copies the internal covariance into the provided matrix. */
+error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out);
 
 #endif
