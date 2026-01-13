@@ -7,7 +7,7 @@
 /* A state_fn is one that takes a state, a control, and calculates the corresponding
    rate of change of state.
 */
-typedef error_t (*state_fn)(
+typedef dyn_error_t (*state_fn)(
                             v_t *cur_st,
                             v_t *cur_ctrl,
                             v_t *cur_st_rate
@@ -18,7 +18,7 @@ typedef error_t (*state_fn)(
 
    An example integrator_fn would be a 4th order runge-kutta function
 */
-typedef error_t (*integrator_fn)(
+typedef dyn_error_t (*integrator_fn)(
                                 state_fn fn,
                                 float    dt,
                                 v_t *cur_st,

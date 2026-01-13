@@ -1,7 +1,7 @@
 #include "linear_algebra/decompositions.h"
 #include "linear_algebra/properties.h"
 
-error_t la_decompositions_cholesky(m_t* A, m_t* L) {
+dyn_error_t la_decompositions_cholesky(m_t* A, m_t* L) {
     if (!A || !L) {
         return E_NULLP;
     }
@@ -57,7 +57,7 @@ error_t la_decompositions_cholesky(m_t* A, m_t* L) {
 }
 
 // See here for stable gram schmidt: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process#Numerical_stability
-error_t la_decompositions_gram_schmidt(m_t* A, m_t* Q) {
+dyn_error_t la_decompositions_gram_schmidt(m_t* A, m_t* Q) {
     if (!A || !Q) {
         return E_NULLP;
     }
@@ -100,7 +100,7 @@ error_t la_decompositions_gram_schmidt(m_t* A, m_t* Q) {
  *
  * For now this only supports the square A case.
  */
-error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
+dyn_error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
     if (!A || !Q || !R) {
         return E_NULLP;
     }
@@ -139,7 +139,7 @@ error_t la_decompositions_qr(m_t* A, m_t* Q, m_t* R) {
 /* Invert a positive semi-definite matrix using Cholesky decomposition.
  * A = L * L^T, so A^-1 = (L^-1)^T * L^-1
  */
-error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
+dyn_error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
     if (!A || !res) {
         return E_NULLP;
     }
@@ -210,7 +210,7 @@ error_t la_decompositions_invert_positive_semi_definite(m_t* A, m_t* res) {
  * Uses the algorithm from LINPACK (dchud).
  * L is modified in place, x is used as workspace and modified.
  */
-error_t la_decompositions_cholesky_update(m_t* L, m_t* x) {
+dyn_error_t la_decompositions_cholesky_update(m_t* L, m_t* x) {
     if (!L || !x) {
         return E_NULLP;
     }
@@ -248,7 +248,7 @@ error_t la_decompositions_cholesky_update(m_t* L, m_t* x) {
  * L is modified in place, x is used as workspace and modified.
  * Returns E_VAL if result would not be positive definite.
  */
-error_t la_decompositions_cholesky_downdate(m_t* L, m_t* x) {
+dyn_error_t la_decompositions_cholesky_downdate(m_t* L, m_t* x) {
     if (!L || !x) {
         return E_NULLP;
     }

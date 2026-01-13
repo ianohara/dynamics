@@ -4,8 +4,8 @@
 #include "errors.h"
 #include "data_structures/matrix.h"
 
-typedef error_t (*kalman_state_fn)(m_t *x, m_t *v, m_t *x_next);
-typedef error_t (*kalman_state_to_measurement_fn)(m_t* x, m_t *n, m_t *y_next);
+typedef dyn_error_t (*kalman_state_fn)(m_t *x, m_t *v, m_t *x_next);
+typedef dyn_error_t (*kalman_state_to_measurement_fn)(m_t* x, m_t *n, m_t *y_next);
 // This uses the notation from "The Unscented Kalman Filter for Nonlinear Estimation" by Wan and Merwe
 // The implementation of kalman_step is from the same.
 typedef struct kalman_context
@@ -81,13 +81,13 @@ kalman_context_t *kalman_new(
     m_t* measurement_covariance);
 void kalman_free(kalman_context_t *context);
 
-error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement);
+dyn_error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement);
 
 /* Get the current state estimate. Copies the internal state into the provided matrix. */
-error_t kalman_get_state(kalman_context_t* context, m_t* state_out);
+dyn_error_t kalman_get_state(kalman_context_t* context, m_t* state_out);
 
 /* Get the current state covariance estimate. Copies the internal covariance into the provided matrix. */
-error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out);
+dyn_error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out);
 
 // ============================================================================
 // Square-Root Unscented Kalman Filter (SR-UKF)
@@ -167,15 +167,15 @@ kalman_sqrt_context_t *kalman_sqrt_new(
 
 void kalman_sqrt_free(kalman_sqrt_context_t *context);
 
-error_t kalman_sqrt_step(kalman_sqrt_context_t *context, m_t *input_vector, m_t *measurement);
+dyn_error_t kalman_sqrt_step(kalman_sqrt_context_t *context, m_t *input_vector, m_t *measurement);
 
 /* Get the current state estimate. */
-error_t kalman_sqrt_get_state(kalman_sqrt_context_t *context, m_t *state_out);
+dyn_error_t kalman_sqrt_get_state(kalman_sqrt_context_t *context, m_t *state_out);
 
 /* Get the current state covariance estimate (reconstructs P = S*S^T). */
-error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *context, m_t *covariance_out);
+dyn_error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *context, m_t *covariance_out);
 
 /* Get the square root of the covariance directly (S where P = S*S^T). */
-error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *context, m_t *sqrt_cov_out);
+dyn_error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *context, m_t *sqrt_cov_out);
 
 #endif

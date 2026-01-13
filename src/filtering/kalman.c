@@ -258,7 +258,7 @@ void kalman_free(kalman_context_t* context) {
     free(context);
 }
 
-static error_t _kalman_calc_sigmas(kalman_context_t* context) {
+static dyn_error_t _kalman_calc_sigmas(kalman_context_t* context) {
     // First sigma point is the mean
     if (E_OK != m_copy_column(context->x_hat, 0, context->chi_km1, 0)) {
         return E_VAL;
@@ -292,7 +292,7 @@ static error_t _kalman_calc_sigmas(kalman_context_t* context) {
     return E_OK;
 }
 
-static error_t _kalman_propagate_sigmas(kalman_context_t* context, m_t* input_vector) {
+static dyn_error_t _kalman_propagate_sigmas(kalman_context_t* context, m_t* input_vector) {
     if (!context || !input_vector) {
         return E_NULLP;
     }
@@ -317,7 +317,7 @@ static error_t _kalman_propagate_sigmas(kalman_context_t* context, m_t* input_ve
     return E_OK;
 }
 
-error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement) {
+dyn_error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measurement) {
     if (!context || !input_vector || !measurement) {
         return E_NULLP;
     }
@@ -472,7 +472,7 @@ error_t kalman_step(kalman_context_t* context, m_t* input_vector, m_t* measureme
     return E_OK;
 }
 
-error_t kalman_get_state(kalman_context_t* context, m_t* state_out) {
+dyn_error_t kalman_get_state(kalman_context_t* context, m_t* state_out) {
     if (!context || !state_out) {
         return E_NULLP;
     }
@@ -484,7 +484,7 @@ error_t kalman_get_state(kalman_context_t* context, m_t* state_out) {
     return m_copy(context->x_hat, state_out);
 }
 
-error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out) {
+dyn_error_t kalman_get_covariance(kalman_context_t* context, m_t* covariance_out) {
     if (!context || !covariance_out) {
         return E_NULLP;
     }
@@ -685,7 +685,7 @@ void kalman_sqrt_free(kalman_sqrt_context_t *ctx) {
 }
 
 // Helper: Generate sigma points from x and S
-static error_t _sqrt_generate_sigma_points(kalman_sqrt_context_t* ctx) {
+static dyn_error_t _sqrt_generate_sigma_points(kalman_sqrt_context_t* ctx) {
     size_t n = ctx->state_len;
 
     // First sigma point is the mean
@@ -707,7 +707,7 @@ static error_t _sqrt_generate_sigma_points(kalman_sqrt_context_t* ctx) {
 }
 
 // Helper: Compute weighted mean of columns
-static error_t _sqrt_weighted_mean(m_t* points, m_t* weights, m_t* mean) {
+static dyn_error_t _sqrt_weighted_mean(m_t* points, m_t* weights, m_t* mean) {
     m_set_all(mean, 0);
     for (size_t i = 0; i < points->cols; i++) {
         m_data_t w = m_get(weights, i, 0);
@@ -716,7 +716,7 @@ static error_t _sqrt_weighted_mean(m_t* points, m_t* weights, m_t* mean) {
     return E_OK;
 }
 
-error_t kalman_sqrt_step(kalman_sqrt_context_t *ctx, m_t *input_vector, m_t *measurement) {
+dyn_error_t kalman_sqrt_step(kalman_sqrt_context_t *ctx, m_t *input_vector, m_t *measurement) {
     if (!ctx || !input_vector || !measurement) {
         return E_NULLP;
     }
@@ -1000,7 +1000,7 @@ error_t kalman_sqrt_step(kalman_sqrt_context_t *ctx, m_t *input_vector, m_t *mea
     return E_OK;
 }
 
-error_t kalman_sqrt_get_state(kalman_sqrt_context_t *ctx, m_t *state_out) {
+dyn_error_t kalman_sqrt_get_state(kalman_sqrt_context_t *ctx, m_t *state_out) {
     if (!ctx || !state_out) {
         return E_NULLP;
     }
@@ -1010,7 +1010,7 @@ error_t kalman_sqrt_get_state(kalman_sqrt_context_t *ctx, m_t *state_out) {
     return m_copy(ctx->x_hat, state_out);
 }
 
-error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *ctx, m_t *covariance_out) {
+dyn_error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *ctx, m_t *covariance_out) {
     if (!ctx || !covariance_out) {
         return E_NULLP;
     }
@@ -1029,7 +1029,7 @@ error_t kalman_sqrt_get_covariance(kalman_sqrt_context_t *ctx, m_t *covariance_o
     return E_OK;
 }
 
-error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *ctx, m_t *sqrt_cov_out) {
+dyn_error_t kalman_sqrt_get_sqrt_covariance(kalman_sqrt_context_t *ctx, m_t *sqrt_cov_out) {
     if (!ctx || !sqrt_cov_out) {
         return E_NULLP;
     }

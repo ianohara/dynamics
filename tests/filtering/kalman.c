@@ -18,14 +18,14 @@ void test_filtering_kalman__cleanup(void)
 }
 
 // Simple state transition: x_next = x + v (additive input)
-static error_t simple_state_fn(m_t* x, m_t* v, m_t* x_next) {
+static dyn_error_t simple_state_fn(m_t* x, m_t* v, m_t* x_next) {
     m_set_all(x_next, 0);
     m_add(x, v, x_next);
     return E_OK;
 }
 
 // Measurement function: observe the first state element only
-static error_t observe_first_element_fn(m_t* x, m_t* n, m_t* y) {
+static dyn_error_t observe_first_element_fn(m_t* x, m_t* n, m_t* y) {
     (void)n;  // Noise is handled separately in the UKF
     m_set(y, 0, 0, m_get(x, 0, 0));
     return E_OK;
@@ -73,7 +73,7 @@ void test_filtering_kalman__nonsense_step(void)
     m_t* measurement = m_new(1, 1);
     m_set(measurement, 0, 0, 0.5);
 
-    error_t result = kalman_step(kt, input_vector, measurement);
+    dyn_error_t result = kalman_step(kt, input_vector, measurement);
     cl_assert_(result == E_OK, "kalman_step should return E_OK");
 
     kalman_free(kt);
@@ -92,14 +92,14 @@ void test_filtering_kalman__nonsense_step(void)
 // The filter should converge to the true position.
 // ============================================================================
 
-static error_t constant_position_state_fn(m_t* x, m_t* v, m_t* x_next) {
+static dyn_error_t constant_position_state_fn(m_t* x, m_t* v, m_t* x_next) {
     (void)v;  // No input affects constant position
     // Position stays the same
     m_set(x_next, 0, 0, m_get(x, 0, 0));
     return E_OK;
 }
 
-static error_t direct_position_measurement_fn(m_t* x, m_t* n, m_t* y) {
+static dyn_error_t direct_position_measurement_fn(m_t* x, m_t* n, m_t* y) {
     (void)n;
     // Directly observe position
     m_set(y, 0, 0, m_get(x, 0, 0));
@@ -146,7 +146,7 @@ void test_filtering_kalman__constant_position(void)
 
     for (size_t i = 0; i < num_steps; i++) {
         m_set(measurement, 0, 0, true_position + noise_pattern[i]);
-        error_t result = kalman_step(kt, input_vector, measurement);
+        dyn_error_t result = kalman_step(kt, input_vector, measurement);
         cl_assert_(result == E_OK, "kalman_step should succeed");
     }
 
@@ -175,7 +175,7 @@ void test_filtering_kalman__constant_position(void)
 // The filter should track both position and velocity.
 // ============================================================================
 
-static error_t constant_velocity_state_fn(m_t* x, m_t* v, m_t* x_next) {
+static dyn_error_t constant_velocity_state_fn(m_t* x, m_t* v, m_t* x_next) {
     (void)v;
     // position_next = position + velocity * dt (dt = 1)
     // velocity_next = velocity
@@ -187,7 +187,7 @@ static error_t constant_velocity_state_fn(m_t* x, m_t* v, m_t* x_next) {
     return E_OK;
 }
 
-static error_t position_only_measurement_fn(m_t* x, m_t* n, m_t* y) {
+static dyn_error_t position_only_measurement_fn(m_t* x, m_t* n, m_t* y) {
     (void)n;
     // Only observe position
     m_set(y, 0, 0, m_get(x, 0, 0));
@@ -239,7 +239,7 @@ void test_filtering_kalman__constant_velocity(void)
         m_data_t true_position = true_velocity * (t + 1);
         m_set(measurement, 0, 0, true_position + noise_pattern[t]);
 
-        error_t result = kalman_step(kt, input_vector, measurement);
+        dyn_error_t result = kalman_step(kt, input_vector, measurement);
         cl_assert_(result == E_OK, "kalman_step should succeed");
     }
 
@@ -315,7 +315,7 @@ void test_filtering_kalman__sqrt_nonsense_step(void)
     m_t* measurement = m_new(1, 1);
     m_set(measurement, 0, 0, 0.5);
 
-    error_t result = kalman_sqrt_step(kt, input_vector, measurement);
+    dyn_error_t result = kalman_sqrt_step(kt, input_vector, measurement);
     cl_assert_(result == E_OK, "kalman_sqrt_step should return E_OK");
 
     kalman_sqrt_free(kt);
@@ -366,7 +366,7 @@ void test_filtering_kalman__sqrt_constant_position(void)
 
     for (size_t i = 0; i < num_steps; i++) {
         m_set(measurement, 0, 0, true_position + noise_pattern[i]);
-        error_t result = kalman_sqrt_step(kt, input_vector, measurement);
+        dyn_error_t result = kalman_sqrt_step(kt, input_vector, measurement);
         cl_assert_(result == E_OK, "kalman_sqrt_step should succeed");
     }
 
@@ -432,7 +432,7 @@ void test_filtering_kalman__sqrt_constant_velocity(void)
         m_data_t true_position = true_velocity * (t + 1);
         m_set(measurement, 0, 0, true_position + noise_pattern[t]);
 
-        error_t result = kalman_sqrt_step(kt, input_vector, measurement);
+        dyn_error_t result = kalman_sqrt_step(kt, input_vector, measurement);
         cl_assert_(result == E_OK, "kalman_sqrt_step should succeed");
     }
 

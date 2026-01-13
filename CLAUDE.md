@@ -45,7 +45,7 @@ filtering_kalman
 
 ### Error Handling Pattern
 
-Functions return `error_t` codes defined in `inc/errors.h`:
+Functions return `dyn_error_t` codes defined in `inc/errors.h`:
 - `E_OK` (0) - Success
 - `E_NULLP` (1) - Null pointer
 - `E_VAL` (2) - Invalid value/dimension mismatch
@@ -57,7 +57,7 @@ For floating-point returns, `V_NAN` signals errors.
 ### Naming Conventions
 
 - Module prefixes: `v_` (vector), `m_` (matrix), `la_` (linear algebra), `kalman_`
-- Types use `_t` suffix: `v_t`, `m_t`, `error_t`
+- Types use `_t` suffix: `v_t`, `m_t`, `dyn_error_t`
 
 ### Memory Management
 
@@ -77,10 +77,10 @@ The Unscented Kalman Filter (UKF) requires user-defined callback functions:
 
 ```c
 // State transition: x_next = f(x, input)
-typedef error_t (*kalman_state_fn)(m_t *x, m_t *v, m_t *x_next);
+typedef dyn_error_t (*kalman_state_fn)(m_t *x, m_t *v, m_t *x_next);
 
 // Measurement: y = h(x)
-typedef error_t (*kalman_state_to_measurement_fn)(m_t* x, m_t *n, m_t *y_next);
+typedef dyn_error_t (*kalman_state_to_measurement_fn)(m_t* x, m_t *n, m_t *y_next);
 ```
 
 Basic usage:

@@ -1,16 +1,12 @@
 #ifndef __ERRORS_H__121212
 #define __ERRORS_H__121212
 
-#ifdef error
-#   error "error already defined! Use something other than error for the error enum"
-#endif /* error */
-
-typedef enum error {
+typedef enum dyn_error {
     E_OK    = 0,
     E_NULLP = 1,
     E_VAL   = 2,
     E_ERR   = 3, // Generic error
     E_INIT  = 4, // Initialization error
-} error_t;
+} dyn_error_t;
 
 #endif /* __ERRORS_H__121212 */

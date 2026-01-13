@@ -27,7 +27,7 @@ v_t* v_new(size_t len)
     return nv;
 }
 
-error_t v_del(v_t *v)
+dyn_error_t v_del(v_t *v)
 {
     if (!v) return E_OK;
     if (v->data) free(v->data);
@@ -73,7 +73,7 @@ v_t* v_new_ones(size_t len)
     return v_new_from_value((v_data_t)1.0, len);
 }
 
-error_t v_set(const v_t *v, size_t ind, v_data_t val)
+dyn_error_t v_set(const v_t *v, size_t ind, v_data_t val)
 {
     if (!v) return E_NULLP;
     if (ind >= v->len) return E_VAL;
@@ -94,7 +94,7 @@ size_t v_len(const v_t * const v)
     return v->len;
 }
 
-error_t v_sp(v_data_t s, v_t *v, v_t *res)
+dyn_error_t v_sp(v_data_t s, v_t *v, v_t *res)
 {
     if (!v || !res) return E_NULLP;
     if (v_len(v) != v_len(res)) return E_VAL;
@@ -105,7 +105,7 @@ error_t v_sp(v_data_t s, v_t *v, v_t *res)
     return E_OK;
 }
 
-error_t v_sum(v_t *lhs, v_t *rhs, v_t *res)
+dyn_error_t v_sum(v_t *lhs, v_t *rhs, v_t *res)
 {
     if (!lhs || !rhs || !res) return E_NULLP;
     if (lhs->len != rhs->len) return E_VAL;
@@ -117,7 +117,7 @@ error_t v_sum(v_t *lhs, v_t *rhs, v_t *res)
     return E_OK;
 }
 
-error_t v_negate(v_t *v, v_t *res)
+dyn_error_t v_negate(v_t *v, v_t *res)
 {
     if (!v || !res) return E_NULLP;
     if (v->len != res->len) return E_VAL;

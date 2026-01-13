@@ -68,7 +68,7 @@ m_t* m_identity(size_t dim) {
     return m;
 }
 
-error_t m_free(m_t *m)
+dyn_error_t m_free(m_t *m)
 {
     if (!m) return E_OK;
     if (m->data) free(m->data);
@@ -86,7 +86,7 @@ static inline size_t m_get_index(m_t *mat, size_t m, size_t n)
     return m*mat->cols+n;
 }
 
-error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val)
+dyn_error_t m_set(m_t *mat, size_t m, size_t n, m_data_t val)
 {
     if (!mat) return E_NULLP;
     if (m >= mat->rows) return E_VAL;
@@ -106,7 +106,7 @@ m_data_t m_get(m_t *mat, size_t m, size_t n)
     return mat->data[m_get_index(mat,m,n)];
 }
 
-error_t m_mult(m_t *lhs, m_t *rhs, m_t *res)
+dyn_error_t m_mult(m_t *lhs, m_t *rhs, m_t *res)
 {
     size_t common_dim;
     m_data_t rc_sum;
@@ -133,7 +133,7 @@ error_t m_mult(m_t *lhs, m_t *rhs, m_t *res)
     return E_OK;
 }
 
-error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
+dyn_error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
 {
     if (!lhs || !rhs || !res) return E_NULLP;
     if (lhs->cols != rhs->cols) return E_VAL;
@@ -150,7 +150,7 @@ error_t m_add(m_t *lhs, m_t *rhs, m_t *res)
     return E_OK;
 }
 
-error_t m_negate(m_t *mat, m_t *res)
+dyn_error_t m_negate(m_t *mat, m_t *res)
 {
     if (!mat || !res) return E_NULLP;
     if (mat->cols != res->cols) return E_VAL;
@@ -165,7 +165,7 @@ error_t m_negate(m_t *mat, m_t *res)
     return E_OK;
 }
 
-error_t m_transpose(m_t *mat, m_t *res) {
+dyn_error_t m_transpose(m_t *mat, m_t *res) {
     if (!mat || !res) return E_NULLP;
 
     if (mat->rows != res->cols) {
@@ -224,7 +224,7 @@ bool m_epsilon_equal(m_t *a, m_t *b, m_data_t epsilon) {
     return true;
 }
 
-error_t m_set_all(m_t* mat, m_data_t val) {
+dyn_error_t m_set_all(m_t* mat, m_data_t val) {
     if (!mat) {
         return E_NULLP;
     }
@@ -246,7 +246,7 @@ bool m_same_size(m_t* a, m_t* b) {
     return a && b && a->rows == b->rows && a->cols == b->cols;
 }
 
-error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
+dyn_error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
     if (!src || !dest) {
         return E_NULLP;
     }
@@ -268,7 +268,7 @@ error_t m_normalize_column_l2(m_t* src, m_t* dest, size_t col_idx) {
     return E_OK;
 }
 
-error_t m_copy_column(m_t* src, size_t src_col, m_t* dest, size_t dest_col) {
+dyn_error_t m_copy_column(m_t* src, size_t src_col, m_t* dest, size_t dest_col) {
     if (!src || !dest){
         return E_NULLP;
     }
@@ -288,7 +288,7 @@ error_t m_copy_column(m_t* src, size_t src_col, m_t* dest, size_t dest_col) {
     return E_OK;
 }
 
-error_t m_copy_into(m_t* src, m_t* dest, size_t dest_row, size_t dest_col) {
+dyn_error_t m_copy_into(m_t* src, m_t* dest, size_t dest_row, size_t dest_col) {
     if (!src || !dest) {
         return E_NULLP;
     }
@@ -310,7 +310,7 @@ error_t m_copy_into(m_t* src, m_t* dest, size_t dest_row, size_t dest_col) {
     return E_OK;
 }
 
-error_t m_add_scaled_column(m_t* src, size_t src_col, m_data_t scale, m_t* dest, size_t dest_col) {
+dyn_error_t m_add_scaled_column(m_t* src, size_t src_col, m_data_t scale, m_t* dest, size_t dest_col) {
     if (!src || !dest){
         return E_NULLP;
     }
@@ -330,7 +330,7 @@ error_t m_add_scaled_column(m_t* src, size_t src_col, m_data_t scale, m_t* dest,
     return E_OK;
 }
 
-error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res) {
+dyn_error_t m_column_dot_product(m_t* A, size_t a_col, m_t* B, size_t b_col, m_data_t* res) {
     if (!A || !B || !res) {
         return E_NULLP;
     }
@@ -366,7 +366,7 @@ size_t m_max_dim(m_t* mat) {
     return mat->rows > mat->cols ? mat->rows : mat->cols;
 }
 
-error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res) {
+dyn_error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res) {
     if (!lhs || !rhs || !res) {
         return E_NULLP;
     }
@@ -388,7 +388,7 @@ error_t m_outer_product(m_t* lhs, m_t* rhs, m_t* res) {
     return E_OK;
 }
 
-error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
+dyn_error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
     if (!src || !dest) {
         return E_NULLP;
     }
@@ -406,7 +406,7 @@ error_t m_scalar_multiply(m_t* src, m_data_t multiplier, m_t* dest) {
     return E_OK;
 }
 
-error_t m_copy(m_t* src, m_t* dest) {
+dyn_error_t m_copy(m_t* src, m_t* dest) {
     if (!src || !dest) {
         return E_NULLP;
     }
